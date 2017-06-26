@@ -1,0 +1,22 @@
+#######################################
+# Syntax Coloring Map GraphicDisplayElements
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+gde KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+setupElement	KEYWORD2
+renderElement	KEYWORD2
+hasData			KEYWORD2
+setDataFlag		KEYWORD2
+clearDataFlag	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+NUM_ELEMENTS	LITERAL1
