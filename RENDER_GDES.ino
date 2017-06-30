@@ -43,7 +43,7 @@ void RenderGPS()
         case 1:
             x = 100;
             y = 100;
-//          tft.fillScreen(ILI9340_BLACK);
+//            tft.fillScreen(ILI9340_BLACK);
             tft.fillCircle(x, y, r_inner, color);
             tft.drawCircle(x, y, r_outer, color);
             tft.drawCircle(x, y, r_outer + 1, color);    // We draw two outer circles to give the line double width

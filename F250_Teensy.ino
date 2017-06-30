@@ -45,7 +45,7 @@
 
     // SERIAL
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
-        #define BaudRate     9600      // Set baud rate here if you know what you're doing and don't like the default value
+        #define BaudRate     115200      // Set baud rate here if you know what you're doing and don't like the default value
 
 
     // PINS
@@ -65,10 +65,8 @@
             //UNUSED                       5        // D5    unused
             #define     TFT_PWM            6        // D6    Output - backlight PWM value
             #define     _sd_cs             7        // D7    Output - SD CS is not really needed since I am not accessing the SD card
-            #define     _dc                8        // D8    ?
-            #define     _rst               9        // D9    Output - TFT reset
-//            #define     _dc                9        // D9    TEENSY VERSION
-//            #define     _cs               10        // D10   TEENSY VERSINO
+            #define     _rst               8        // D8    Output - TFT reset
+            #define     _dc                9        // D9    TEENSY VERSION
             #define     _cs               10        // D10   Output - Called "SS" on my board, this is the TFT CS (chip select)
             #define     _mosi             11        // D11   Output - data out
             #define     _miso             12        // D12   Input  - Not really needed, this is data back from TFT (not TO TFT)
@@ -232,6 +230,7 @@ void loop()
     GPS_FIX ? GPS_FIX = false : GPS_FIX = true;
     displayElement.setDataFlag(gde_GPS);
 
+    
 }
 
 
