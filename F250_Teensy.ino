@@ -4,6 +4,7 @@
 //#include "src/Adafruit_ILI9340/Adafruit_ILI9340.h"
 #include "src/ILI9341_t3/ILI9341_t3.h"                              // PJRC's optimized version of Adafruit's ILI9341 library: https://github.com/PaulStoffregen/ILI9341_t3
 #include "src/ILI9341_t3/font_Arial.h"                              // from ILI9341_t3
+#include "src/ILI9341_t3/font_ArialBold.h"                          // from ILI9341_t3
 #define ENCODER_OPTIMIZE_INTERRUPTS                                 // Use the optimized version of encoder since both pins can be used with interrupts. Must be defined before the include. 
 #include "src/Encoder/Encoder.h"                                    // PJRC: https://www.pjrc.com/teensy/td_libs_Encoder.html. Only cost to optimized interrupts is you can not use attachInterrupt()
 #include "COMMS.h"
@@ -12,7 +13,7 @@
 #include "src/F250_TEENSY_EEPROM/F250_TEENSY_EEPROM.h"
 #include "src/EEPROMex/EEPROMex.h"  
 #include "src/F250_SimpleTimer/F250_SimpleTimer.h"
-#include "src/OSL_Button/OSL_Button.h"
+#include "src/OP_Button/OP_Button.h"
 
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
@@ -30,6 +31,7 @@
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         usb_serial_class                        *DebugSerial;       // Which serial port to print debug messages to (HardwareSerial is equal to Serial0/Serial Port 0/USART0)
         boolean DEBUG                           = true;             // Print debugging messages to the PC
+        #define MegaSerial                      Serial1             // What serial port are we communicating with the Mega on
 
         #define SENTENCE_BYTES                  5                   // How many bytes in a valid sentence. 
         struct DataSentence {                                       // Serial commands should have four bytes (plus termination). 
@@ -82,34 +84,99 @@
             #define tftRotation 3
 
         // Top-left offset
-        int16_t OL                              = 10;               // Offset left
-        int16_t OT                              = 20;               // Offset top
+        int16_t OX                              = 5;                // Offset left
+        int16_t OY                              = 15;               // Offset top
 
 
-    // ROTARY ENCODER
+    // ROTARY ENCODER / PUSHBUTTON
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         Encoder knob(ROT_A, ROT_B);
         long knobPosition =                     -999;
-
+        OP_Button InputButton = OP_Button(ROT_C, true, true, 25);   // Initialize a button object. Set pin, internal pullup = true, inverted = true, debounce time = 25 mS
+        enum {BUTTON_WAIT, BUTTON_TO_WAIT};
+        uint8_t ButtonState              = BUTTON_WAIT;             //The current button state machine state
 
     // MY GRAPHIC DATA ELEMENTS
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
-        gde displayElement;                                         // Of type gde (graphic display element) - my gde class consructor
+        gde displayElement;                                         // Of type gde (graphic display element) - my gde class constructor
+
+        #define SCREEN_MENU                     0
+        #define SCREEN_AUTO                     1
+        #define SCREEN_SPEED                    2
+        #define SCREEN_TEMP                     3
+        uint8_t currentScreen                   = SCREEN_AUTO;      // What screen are we on
         
-        int currentScreen                       = 1;                // What screen are we on
+        // Brightness
+        #define ADJUST_BRIGHTNESS_TIMEOUT       4000                // How long do we stay in adjust brightness mode until we automatically exit
+        int TimerID_adjustBrightness            = 0;
+        uint8_t BacklightPWM                    = 255;              // What backlight strength to start (0-255)
+        boolean adjustBrightness                = false;            // Are we adjusting the brightness on the screen
 
+        // Nighttime text color
+        boolean nightTime                       = false;            // Night time means put all text on the screen to green
 
-    // GLOBAL VARS 
+        // My colors
+        uint16_t CurrentBackgroundColor         = ILI9341_BLACK;            
+        //#define TEXT_COLOR_NIGHT               0x0F96              // 15, 240, 170
+        #define TEXT_COLOR_NIGHT               0x1514              // 23, 161, 165
+        #define COLOR_DESELECT                  0x3186              // 51,  51,  51
+        
+
+    // GLOBAL VARS - TO STORE INCOMING DATA
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
-        boolean GPS_FIX =                       false;
+        boolean GPS_Fix                         = false;
+        uint8_t GPS_FixQuality                  = 0;
+        uint8_t GPS_NumSatellites               = 0;
+
+        // Temperature
+        typedef char _TEMP_SENSOR;                                  // Convenient names for our sensors
+        #define TS_INTERNAL                     0
+        #define TS_EXTERNAL                     1
+        #define TS_AUX                          2
+        #define NUM_TEMP_SENSORS                3
+        // Temperature sensor data for each individual sensor
+        struct _tempsensor{                             
+            int16_t currentTemp;                        // Integer value between -255 and 255
+            int16_t priorTemp;                          // Last reading since change
+            int16_t sessionMinTemp;                     // Min temp of this session
+            int16_t sessionMaxTemp;                     // Max temp of this session
+            int16_t allTimeMaxTemp;                     // Max temp forever
+            _datetime allTimeMaxDT;                     // Max temp forever timestamp
+            int16_t allTimeMinTemp;                     // Min temp forever
+            _datetime allTimeMinDT;                     // Min temp forever timestamp
+            boolean updateMinDT_Flag;                   // If true, the next timestamp that comes through is the date of the all time minimum temperature
+            boolean updateMaxDT_Flag;                   // If true, the next timestamp that comes through is the date of the all time maximum temperature
+            _TEMP_SENSOR sensorName;                    // These will get assigned in InitTempStructs()
+        };
+        _tempsensor InternalTemp;
+        _tempsensor ExternalTemp;
+        _tempsensor AuxTemp;
+
+        // Voltage
+        float Voltage                           = 0;
+
+        // Date/time
+        _datetime DT;
+
+        // Fuel pump
+        boolean FuelPump                        = false;
+
+        // GSM
+        uint8_t GSM_Bars                        = 0;
+
+        // Speed/direction
+        uint8_t Speed                           = 0; 
+        uint16_t Angle                          = 0;    // 0-360 degrees
+        uint8_t Heading                         = 0;    // N, S, E, W, etc...
 
     
     // TESTING ! ! TESTING ! ! TESTING 
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
-    elapsedMillis swapTime;
+    elapsedMillis testTime;
 
 
-void setup(){
+void setup()
+{
 
     // Pins
     // -------------------------------------------------------------------------------------------------------------------------------------------------->    
@@ -117,44 +184,64 @@ void setup(){
         pinMode(TFT_PWM, OUTPUT);                                   // Display backlight
         
         // Encoder pins are handled by the encoder library. If you try to set them to INPUT here the library will not work! 
-        
-        // Button pin, not actually part of the encoder: 
-        pinMode(ROT_C, INPUT_PULLUP);
-        
+        // Pushbutton pin is handled by Button library
+       
     // Init Serial & Comms
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
         Serial.begin(USB_BAUD_RATE); 
-        DebugSerial = &Serial;                                      // Use Serial 0 for debugging messages
+        MegaSerial.begin(USB_BAUD_RATE);                            // Serial used to communicate with the Mega
+
+    // Wait
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->    
+        // The button library will return a wasPressed when we first boot, unless we do two reads farther apart than debounce time. 
+        // It can also be useful to give a bit of time so the serial port can init
+        InputButton.read();
+        delay(100);
+        InputButton.read();
 
     // Load EEPROM
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
         boolean did_we_init = eeprom.begin();                       // begin() will initialize EEPROM if it never has been before, and load all EEPROM settings into our ramcopy struct
-        if (did_we_init && DEBUG) { DebugSerial->println(F("EEPROM Initalized")); }    
+        if (did_we_init && DEBUG) { Serial.println(F("EEPROM Initalized")); }    
 
     // TFT
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
         tft.begin();
+        FullBrightness();
         tft.setRotation(tftRotation);
-        tft.fillScreen(ILI9341_BLACK);
-        
-        tft.setFont(Arial_60);                  // See the .h file for the list of sizes
-        //tft.setTextSize(14);
-        tft.setTextColor(ILI9341_WHITE);
-        tft.setCursor(OL, OT);      // x (left), y (top)
-        tft.println("65");        
+        tft.fillScreen(CurrentBackgroundColor);
 
-        digitalWrite(TFT_PWM, 500);
+        tft.setFontAdafruit();                      // To go back to default font
+        tft.setTextSize(6);                         // Then use this to set text size, instead of specifying the size in the custom font name.
+        
+//        tft.setFont(Arial_60);                  // See the .h file for the list of sizes
+//        tft.setTextColor(ILI9341_WHITE);
+//        tft.setCursor(OX, OY);      // x (left), y (top)
+//        tft.println("65");        
+
+
 
     // GRAPHIC DISPLAY ELEMENTS
     // -------------------------------------------------------------------------------------------------------------------------------------------------->    
-        displayElement.setupElement(gde_GPS, RenderGPS);
+        displayElement.setupElement(gde_GPS, RenderGPS);                    // GPS display
+        displayElement.setupElement(gde_Temperature, RenderTemperature);    // Temperature display
+        displayElement.setupElement(gde_GSM, RenderGSM);                    // GSM cell phone
+        displayElement.setupElement(gde_Voltage, RenderVoltage);            // Voltage
+        displayElement.setupElement(gde_Speed, RenderSpeed);                // Speed
+        displayElement.setupElement(gde_DateTime, RenderDateTime);          // Date/Time
+            DT = getBlankDateTime();                                        // Initialize DT
+        displayElement.setupElement(gde_FuelPump, RenderFuelPump);          // Fuel pump
 
-        displayElement.setDataFlag(gde_GPS);
-        GPS_FIX = true;
+        UpdateAllElements();                                                // Update everything to start
+/*
+    gde_Transmission = 0,
+    gde_Altitude,
+    gde_Radio,
+    gde_Alarm, 
+    gde_Air, 
+    gde_Ign,
+*/
 }
-
-
-
 
 
 
@@ -162,42 +249,28 @@ void loop()
 {
 //    CheckAndFillVars();
 
+//    static uint32_t     TimeLastSerial = 0;                     // Time of last received serial data
+
+//    Serial.println(adjustBrightness);
+
+    CheckSerial();                                              // Communication from the Mega
+    HandleRotary();                                             // Take care of the rotary encoder/push-button
+    timer.run();
+
     for (int i = 0; i < NUM_ELEMENTS; i++) 
     {
         if (displayElement.hasData(i)) displayElement.renderElement(i);
     }
 
-    if (swapTime > 2000)
-    {
-        GPS_FIX ? GPS_FIX = false : GPS_FIX = true;
-        displayElement.setDataFlag(gde_GPS);
-        swapTime = 0;
-    }
-    
-    
-    long knobPos;
-    knobPos = knob.read() / 4;
-    if (knobPos != knobPosition) 
-    {
-        Serial.print("Knob = ");
-        Serial.print(knobPos);
-        Serial.println();
-        knobPosition = knobPos;
-    }
 
-    // if a character is sent from the serial monitor,
-    // reset both back to zero.
-    if (Serial.available()) 
-    {
-        Serial.read();
-        Serial.println("Reset both knobs to zero");
-        knob.write(0);
-    }
 }
 
 
 void CheckAndFillVars()
 {
+
+
+
 //    if (ETin.receiveData())
 //    {
 /*

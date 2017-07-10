@@ -1,4 +1,18 @@
-/*----------------------------------------------------------------------*
+/* OP_Button.h      Button - a library for reading button inputs
+ * Source:          https://github.com/JChristensen/Button      
+ * Authors:         Jack Christensen
+ *
+ * This library is an unmodified copy of Jack Christensen's button library. 
+ * It has been renamed to OP_Button for consistency with other Open Panzer 
+ * libraries and also to avoid conflicts with any of the other numerous
+ * Arduino button libraries you may have already installed. 
+ *
+ * All credit goes to Jack Christensen. For more info, see:
+ * https://github.com/JChristensen/Button
+ *
+ * Mr. Christensen's original copyright is reprinted below:
+ *   
+ *----------------------------------------------------------------------*
  * Arduino Button Library v1.0                                          *
  * Jack Christensen Mar 2012                                            *
  *                                                                      *
@@ -8,17 +22,17 @@
  * letter to Creative Commons, 171 Second Street, Suite 300,            *
  * San Francisco, California, 94105, USA.                               *
  *----------------------------------------------------------------------*/
-#ifndef OSL_Button_h
-#define OSL_Button_h
-#if ARDUINO >= 100
+
+#ifndef OP_BUTTON_H
+#define OP_BUTTON_H
+
 #include <Arduino.h> 
-#else
-#include <WProgram.h> 
-#endif
-class OSL_Button
+
+
+class OP_Button
 {
     public:
-        OSL_Button(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t dbTime);
+        OP_Button(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t dbTime);
         uint8_t read();
         uint8_t isPressed();
         uint8_t isReleased();

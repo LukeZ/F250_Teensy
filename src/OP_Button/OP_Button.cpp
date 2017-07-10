@@ -1,4 +1,18 @@
-/*----------------------------------------------------------------------*
+/* OP_Button.h      Button - a library for reading button inputs
+ * Source:          https://github.com/JChristensen/Button      
+ * Authors:         Jack Christensen
+ *
+ * This library is an unmodified copy of Jack Christensen's button library. 
+ * It has been renamed to OP_Button for consistency with other Open Panzer 
+ * libraries and also to avoid conflicts with any of the other numerous
+ * Arduino button libraries you may have already installed. 
+ *
+ * All credit goes to Jack Christensen. For more info, see:
+ * https://github.com/JChristensen/Button
+ *
+ * Mr. Christensen's original copyright is reprinted below:
+ *   
+ *----------------------------------------------------------------------*
  * Arduino Button Library v1.0                                          *
  * Jack Christensen May 2011, published Mar 2012                        *
  *                                                                      *
@@ -14,7 +28,7 @@
  * San Francisco, California, 94105, USA.                               *
  *----------------------------------------------------------------------*/
 
-#include "OSL_Button.h"
+#include "OP_Button.h"
 
 /*----------------------------------------------------------------------*
  * Button(pin, puEnable, invert, dbTime) instantiates a button object.  *
@@ -29,7 +43,7 @@
  * (Note that invert cannot be implied from puEnable since an external  *
  *  pullup could be used.)                                              *
  *----------------------------------------------------------------------*/
-OSL_Button::OSL_Button(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t dbTime)
+OP_Button::OP_Button(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t dbTime)
 {
     _pin = pin;
     _puEnable = puEnable;
@@ -50,7 +64,7 @@ OSL_Button::OSL_Button(uint8_t pin, uint8_t puEnable, uint8_t invert, uint32_t d
  * read() returns the state of the button, 1==pressed, 0==released,     *
  * does debouncing, captures and maintains times, previous states, etc. *
  *----------------------------------------------------------------------*/
-uint8_t OSL_Button::read(void)
+uint8_t OP_Button::read(void)
 {
     static uint32_t ms;
     static uint8_t pinVal;
@@ -83,12 +97,12 @@ uint8_t OSL_Button::read(void)
  * read, and return false (0) or true (!=0) accordingly.                *
  * These functions do not cause the button to be read.                  *
  *----------------------------------------------------------------------*/
-uint8_t OSL_Button::isPressed(void)
+uint8_t OP_Button::isPressed(void)
 {
     return _state == 0 ? 0 : 1;
 }
 
-uint8_t OSL_Button::isReleased(void)
+uint8_t OP_Button::isReleased(void)
 {
     return _state == 0 ? 1 : 0;
 }
@@ -99,12 +113,12 @@ uint8_t OSL_Button::isReleased(void)
  * true (!=0) accordingly.                                              *
  * These functions do not cause the button to be read.                  *
  *----------------------------------------------------------------------*/
-uint8_t OSL_Button::wasPressed(void)
+uint8_t OP_Button::wasPressed(void)
 {
     return _state && _changed;
 }
 
-uint8_t OSL_Button::wasReleased(void)
+uint8_t OP_Button::wasReleased(void)
 {
     return !_state && _changed;
 }
@@ -115,12 +129,12 @@ uint8_t OSL_Button::wasReleased(void)
  * time in milliseconds. Returns false (0) or true (1) accordingly.     *
  * These functions do not cause the button to be read.                  *
  *----------------------------------------------------------------------*/
-uint8_t OSL_Button::pressedFor(uint32_t ms)
+uint8_t OP_Button::pressedFor(uint32_t ms)
 {
     return (_state == 1 && _time - _lastChange >= ms) ? 1 : 0;
 }
 
-uint8_t OSL_Button::releasedFor(uint32_t ms)
+uint8_t OP_Button::releasedFor(uint32_t ms)
 {
     return (_state == 0 && _time - _lastChange >= ms) ? 1 : 0;
 }
@@ -129,7 +143,7 @@ uint8_t OSL_Button::releasedFor(uint32_t ms)
  * lastChange() returns the time the button last changed state,         *
  * in milliseconds.                                                     *
  *----------------------------------------------------------------------*/
-uint32_t OSL_Button::lastChange(void)
+uint32_t OP_Button::lastChange(void)
 {
     return _lastChange;
 }

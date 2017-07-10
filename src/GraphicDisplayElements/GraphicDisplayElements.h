@@ -27,7 +27,23 @@
 #endif
 
 // maximum number of elements
-const static int NUM_ELEMENTS = 11;
+const static int NUM_ELEMENTS = 13;
+
+enum elementNames {
+	gde_Transmission = 0,
+	gde_Temperature,
+	gde_Altitude,
+	gde_GPS,
+	gde_Speed,      // Includes heading
+	gde_Radio,
+	gde_FuelPump, 
+	gde_Alarm, 
+	gde_Air, 
+	gde_Ign,
+	gde_Voltage, 
+    gde_GSM, 
+    gde_DateTime
+};
 	
 typedef void (*gde_callback)(void);
 
@@ -51,6 +67,9 @@ public:
     // Set data flag
     void setDataFlag(int numElement);
 
+    // Set all flags
+    void setAllDataFlags(void);
+
     // Clear data flag
     void clearDataFlag(int numElement);
 
@@ -64,20 +83,7 @@ private:
 
 };
 
-enum elementNames {
-	gde_Transmission = 0,
-	gde_Temperature,
-	gde_Altitude,
-	gde_GPS,
-	gde_Speed,
-	gde_Heading,
-	gde_Radio,
-	gde_FuelPump, 
-	gde_Alarm, 
-	gde_Air, 
-	gde_Ign,
-	gde_Voltage
-};
+
 
 #endif
 

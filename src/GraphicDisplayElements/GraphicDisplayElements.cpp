@@ -69,6 +69,14 @@ void gde::setDataFlag(int numElement)
     newdata[numElement] = true;
 }
 
+void gde::setAllDataFlags(void)
+{
+    for (uint8_t i=0; i<NUM_ELEMENTS; i++)
+    {
+        gde::setDataFlag(i);
+    }
+}
+
 void gde::clearDataFlag(int numElement)
 {
     if (numElement >= NUM_ELEMENTS) {
