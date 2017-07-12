@@ -90,26 +90,27 @@ int16_t temp;
 uint16_t tAngle;
 _tempsensor *ts; 
 boolean regularDT = true; 
-
+static uint8_t volts;
+static int TimerID_VoltageWarning = 0;
     
     switch (sentence->Command)
     {
         case CMD_TEMP_POSITIVE:
         case CMD_TEMP_NEGATIVE:
             temp = (int16_t)sentence->Value;
-            if (sentence->Command == CMD_TEMP_NEGATIVE) temp = -(sentence->Value);
+            if (sentence->Command == CMD_TEMP_NEGATIVE) temp = -temp;
             switch (sentence->Modifier)
             {
-                case TS_INTERNAL:   if (InternalTemp.currentTemp != temp) { InternalTemp.currentTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_EXTERNAL:   if (ExternalTemp.currentTemp != temp) { ExternalTemp.currentTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_AUX:        if (AuxTemp.currentTemp != temp)      { AuxTemp.currentTemp = temp;      displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_INTERNAL:   if (InternalTemp.currentTemp != temp) { InternalTemp.currentTemp = temp; InternalTemp.sensorPresent = true; displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_EXTERNAL:   if (ExternalTemp.currentTemp != temp) { ExternalTemp.currentTemp = temp; ExternalTemp.sensorPresent = true; displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_AUX:        if (AuxTemp.currentTemp != temp)      { AuxTemp.currentTemp = temp;      AuxTemp.sensorPresent = true;      displayElement.setDataFlag(gde_Temperature); } break;
             }
             break;
 
         case CMD_TEMP_MIN_POS:
         case CMD_TEMP_MIN_NEG:
             temp = (int16_t)sentence->Value;
-            if (sentence->Command == CMD_TEMP_MIN_NEG) temp = -(sentence->Value);
+            if (sentence->Command == CMD_TEMP_MIN_NEG) temp = -temp;
             switch (sentence->Modifier)
             {
                 case TS_INTERNAL:   { InternalTemp.sessionMinTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
@@ -121,7 +122,7 @@ boolean regularDT = true;
         case CMD_TEMP_MAX_POS:
         case CMD_TEMP_MAX_NEG:
             temp = (int16_t)sentence->Value;
-            if (sentence->Command == CMD_TEMP_MAX_NEG) temp = -(sentence->Value);
+            if (sentence->Command == CMD_TEMP_MAX_NEG) temp = -temp;
             switch (sentence->Modifier)
             {
                 case TS_INTERNAL:   { InternalTemp.sessionMaxTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
@@ -133,7 +134,7 @@ boolean regularDT = true;
         case CMD_TEMP_ALLTIME_MIN_POS:
         case CMD_TEMP_ALLTIME_MIN_NEG:
             temp = (int16_t)sentence->Value;
-            if (sentence->Command == CMD_TEMP_ALLTIME_MIN_NEG) temp = -(sentence->Value);
+            if (sentence->Command == CMD_TEMP_ALLTIME_MIN_NEG) temp = -temp;
             switch (sentence->Modifier)
             {
                 case TS_INTERNAL:   { InternalTemp.allTimeMinTemp = temp; InternalTemp.updateMinDT_Flag = true; displayElement.setDataFlag(gde_Temperature); } break;
@@ -145,7 +146,7 @@ boolean regularDT = true;
         case CMD_TEMP_ALLTIME_MAX_POS:
         case CMD_TEMP_ALLTIME_MAX_NEG:
             temp = (int16_t)sentence->Value;
-            if (sentence->Command == CMD_TEMP_ALLTIME_MAX_NEG) temp = -(sentence->Value);
+            if (sentence->Command == CMD_TEMP_ALLTIME_MAX_NEG) temp = -temp;
             switch (sentence->Modifier)
             {
                 case TS_INTERNAL:   { InternalTemp.allTimeMaxTemp = temp; InternalTemp.updateMaxDT_Flag = true; displayElement.setDataFlag(gde_Temperature); } break;
@@ -156,6 +157,14 @@ boolean regularDT = true;
 
         
         case CMD_TEMP_LOST:
+            // Command gets sent if a sensor is lost, this lets the display not to rely on the last reading forever. Next time a temp is sent means it has been found again.
+            switch (sentence->Modifier)
+            {
+                case TS_INTERNAL:   InternalTemp.sensorPresent = false; break;
+                case TS_EXTERNAL:   ExternalTemp.sensorPresent = false; break;
+                case TS_AUX:        AuxTemp.sensorPresent = false;      break;
+            }
+            displayElement.setDataFlag(gde_Temperature);
             break;
 
 
@@ -188,7 +197,7 @@ boolean regularDT = true;
                 displayElement.setDataFlag(gde_Speed);
             }
             break; 
-/*            
+
         case CMD_GPS_HEADING:
             if (Heading != sentence->Value)
             {
@@ -196,14 +205,16 @@ boolean regularDT = true;
                 displayElement.setDataFlag(gde_Speed);
             }
             break; 
-            */
-//    CMD_GPS_ALTITUDE_POS
-//    CMD_GPS_ALTITUDE_NEG
 
-
-        case CMD_VOLTAGE:
-            Voltage = float(sentence->Value) / 10.0;
-            displayElement.setDataFlag(gde_Voltage);
+        case CMD_GPS_ALTITUDE_POS:
+        case CMD_GPS_ALTITUDE_NEG:
+            temp = (sentence->Value * 100) + sentence->Modifier;
+            if (sentence->Command == CMD_GPS_ALTITUDE_NEG) temp = -temp;
+            if (GPS_Altitude != temp)
+            {
+                GPS_Altitude = temp;
+                displayElement.setDataFlag(gde_Altitude);
+            }
             break;
 
         case CMD_YEAR:  
@@ -273,11 +284,81 @@ boolean regularDT = true;
             }
             break;
 
-        case CMD_FUEL_PUMP:
-            FuelPump = sentence->Value;
-            displayElement.setDataFlag(gde_FuelPump);
+        case CMD_VOLTAGE:
+            if (volts != sentence->Value)
+            {
+                Voltage = float(sentence->Value) / 10.0;    // Actual voltage
+                volts = sentence->Value;                    // Just used to check for changes                
+                if (!lowVoltage && sentence->Value <= LOW_VOLTAGE)
+                {   // We've just dropped below the low voltage threshold
+                    lowVoltage = true;
+                    TimerID_VoltageWarning = timer.setInterval(400, RenderVoltage);
+                }
+                if (lowVoltage && sentence->Value > LOW_VOLTAGE)
+                {   // We've just risen above the low voltage threshold
+                    lowVoltage = false;
+                    if (TimerID_VoltageWarning > 0) 
+                    {
+                        timer.deleteTimer(TimerID_VoltageWarning);
+                        TimerID_VoltageWarning = 0;
+                    }
+                }
+                displayElement.setDataFlag(gde_Voltage);
+            }
             break;
-        
+
+        case CMD_LOW_AIR_WARN:
+            // Low air warning (suspension air tank). Value = 1 if Low, 0 = if OK
+            if (LowAirWarning != sentence->Value)
+            {
+                LowAirWarning = sentence->Value;
+                displayElement.setDataFlag(gde_Air);
+            }
+            break;
+
+        case CMD_FUEL_PUMP:
+            if (FuelPump != sentence->Value)
+            {
+                FuelPump = sentence->Value;
+                displayElement.setDataFlag(gde_FuelPump);
+            }
+            break;
+
+        case CMD_HAM_ON:
+            if (Ham_On != sentence->Value)
+            {
+                Ham_On = sentence->Value;
+                displayElement.setDataFlag(gde_Radio);
+            }
+            break;
+
+        case CMD_TQC_LOCK_STATUS:
+            // Torque converter lockup status controlled by Baumann controller
+            if (TQCLockStatus != sentence->Value)
+            {   
+                TQCLockStatus = sentence->Value;
+                displayElement.setDataFlag(gde_Transmission);
+            }
+            break;
+            
+        case CMD_OVERDRIVE:
+            // Overdrive enabled or not
+            if (OverdriveEnabled != sentence->Value)
+            {
+                OverdriveEnabled = sentence->Value;
+                displayElement.setDataFlag(gde_Transmission);
+            }
+            break;
+            
+        case CMD_TRANS_TABLE:
+            // Baumann using Table 1 (default) or Table 2 (alternate) transmission settings
+            if (BaumannTable != sentence->Value)
+            {
+                BaumannTable = sentence->Value;
+                displayElement.setDataFlag(gde_Transmission);
+            }
+            break;
+
     }
 }
 

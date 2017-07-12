@@ -117,10 +117,10 @@
 
         // My colors
         uint16_t CurrentBackgroundColor         = ILI9341_BLACK;            
-        //#define TEXT_COLOR_NIGHT               0x0F96              // 15, 240, 170
-        #define TEXT_COLOR_NIGHT               0x1514              // 23, 161, 165
+        //#define TEXT_COLOR_NIGHT              0x0F96              // 15, 240, 170
+        #define TEXT_COLOR_NIGHT                0x1514              // 23, 161, 165
         #define COLOR_DESELECT                  0x3186              // 51,  51,  51
-        
+        #define COLOR_DARK_YELLOW               0xF400              // 241, 128, 0
 
     // GLOBAL VARS - TO STORE INCOMING DATA
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
@@ -136,10 +136,14 @@
         #define NUM_TEMP_SENSORS                3
         // Temperature sensor data for each individual sensor
         struct _tempsensor{                             
+            boolean sensorPresent;                      // Is the sensor attached
+            boolean lastSensorPresent;                  // 
             int16_t currentTemp;                        // Integer value between -255 and 255
             int16_t priorTemp;                          // Last reading since change
             int16_t sessionMinTemp;                     // Min temp of this session
+            int16_t priorSessionMinTemp;                // 
             int16_t sessionMaxTemp;                     // Max temp of this session
+            int16_t priorSessionMaxTemp;                // 
             int16_t allTimeMaxTemp;                     // Max temp forever
             _datetime allTimeMaxDT;                     // Max temp forever timestamp
             int16_t allTimeMinTemp;                     // Min temp forever
@@ -152,14 +156,29 @@
         _tempsensor ExternalTemp;
         _tempsensor AuxTemp;
 
+        // Altitude
+        int16_t GPS_Altitude                    = 0;
+        int16_t Barometric_Altitude             = 0;
+
         // Voltage
         float Voltage                           = 0;
-
+        boolean lowVoltage                      = false;// If true, we will change the font color and start blinking. 
+        #define LOW_VOLTAGE                     124     // According to Optima, Red and Blue (regular) should read 12.6-12.8 at rest. Yellow (what I have) should be 13-13.2. 
+                                                        // Engine running should be anywhere above 13.3 all the way up to 15
+                                                        // https://www.optimabatteries.com/en-us/support/charging/recommended-battery-voltage
+                                                        // I set this to 12.4 but instead of doing a float (which has problems with comparison), I set it to the pre-convert value
+        
         // Date/time
         _datetime DT;
 
         // Fuel pump
         boolean FuelPump                        = false;
+
+        // Low air warning
+        boolean LowAirWarning                   = false;
+
+        // Ham/CB
+        boolean Ham_On                          = false;
 
         // GSM
         uint8_t GSM_Bars                        = 0;
@@ -169,6 +188,17 @@
         uint16_t Angle                          = 0;    // 0-360 degrees
         uint8_t Heading                         = 0;    // N, S, E, W, etc...
 
+        // Transmission
+        typedef char _TQC_STATE;                                     // Torque converted locked status
+        #define TQC_AUTO                        0
+        #define TQC_FORCE_LOCK                  1
+        #define TQC_FORCE_UNLOCK                2
+        #define TQC_UNKNOWN                     3                    // Not really used other than to force a message on startup
+        _TQC_STATE TQCLockStatus                = TQC_UNKNOWN;
+
+        boolean OverdriveEnabled                = false;
+        uint8_t BaumannTable                    = 0;                // Should be either 1 or 2
+        
     
     // TESTING ! ! TESTING ! ! TESTING 
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
@@ -231,14 +261,14 @@ void setup()
         displayElement.setupElement(gde_DateTime, RenderDateTime);          // Date/Time
             DT = getBlankDateTime();                                        // Initialize DT
         displayElement.setupElement(gde_FuelPump, RenderFuelPump);          // Fuel pump
+        displayElement.setupElement(gde_Altitude, RenderAltitude);          // Altitude
+        displayElement.setupElement(gde_Air, RenderLowAirWarn);             // Low air warning
+        displayElement.setupElement(gde_Radio, RenderHamCB);                // Ham/CB
+        displayElement.setupElement(gde_Transmission, RenderTransmission);  // Transmission settings
 
         UpdateAllElements();                                                // Update everything to start
 /*
-    gde_Transmission = 0,
-    gde_Altitude,
-    gde_Radio,
     gde_Alarm, 
-    gde_Air, 
     gde_Ign,
 */
 }

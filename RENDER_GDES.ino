@@ -1,53 +1,13 @@
 
-/*
-gde_Transmission
-gde_Temperature
-gde_Altitude
-gde_GPS
-gde_Speed
-_Heading
-gde_Radio
-gde_FuelPump
-_Alarm 
-gde_Air 
-gde_Ign
-gde_Voltage
-gde_GSM
-gde_DateTime
-
-// #define ILI9341_BLACK       0x0000         0,   0,   0 
-// #define ILI9341_NAVY        0x000F         0,   0, 128
-// #define ILI9341_DARKGREEN   0x03E0         0, 128,   0 
-// #define ILI9341_DARKCYAN    0x03EF         0, 128, 128 
-// #define ILI9341_MAROON      0x7800       128,   0,   0 
-// #define ILI9341_PURPLE      0x780F       128,   0, 128 
-// #define ILI9341_OLIVE       0x7BE0       128, 128,   0 
-// #define ILI9341_LIGHTGREY   0xC618       192, 192, 192 
-// #define ILI9341_DARKGREY    0x7BEF       128, 128, 128 
-// #define ILI9341_BLUE        0x001F         0,   0, 255 
-// #define ILI9341_GREEN       0x07E0         0, 255,   0 
-// #define ILI9341_CYAN        0x07FF         0, 255, 255 
-// #define ILI9341_RED         0xF800       255,   0,   0 
-// #define ILI9341_MAGENTA     0xF81F       255,   0, 255 
-// #define ILI9341_YELLOW      0xFFE0       255, 255,   0 
-// #define ILI9341_WHITE       0xFFFF       255, 255, 255 
-// #define ILI9341_ORANGE      0xFD20       255, 165,   0 
-// #define ILI9341_GREENYELLOW 0xAFE5       173, 255,  47 
-// #define ILI9341_PINK        0xF81F
-   #define ILI9341_NIGHT_GREEN 0x0F96       15, 240, 170
-*/
-
-#define GPS_GREEN_2         0x07E0
-#define GPS_GREEN           0x0300          // 0, 99, 0
-#define GPS_RED             0x5000          // 84, 0, 0
-
 
 void RenderVoltage()
 {
 int x = 0;
 int y = 0;  
-uint16_t color = ILI9341_WHITE;
+static uint16_t color;
 static float lastVoltage;
+static uint32_t lastBlink = millis(); 
+#define V_BLINK_FREQ        800
 
     switch (currentScreen)
     {
@@ -63,7 +23,21 @@ static float lastVoltage;
 
     // Arial
     tft.setFont(Arial_13);                  
-    if (nightTime) color = TEXT_COLOR_NIGHT;
+
+    // Color
+    if (lowVoltage)
+    {
+        if ((millis() - lastBlink) > V_BLINK_FREQ)
+        {
+            if (color == COLOR_DARK_YELLOW) color = COLOR_DESELECT;
+            else                            color = COLOR_DARK_YELLOW;
+            lastBlink = millis();
+        }
+    }
+    else
+    {
+        nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;
+    }
     
     // Prior voltage - overwrite
     tft.setCursor(x, y);
@@ -84,15 +58,323 @@ static float lastVoltage;
     
 }
 
+void RenderTemperature()
+{
+int x, y;
+int rO;
+int iO;
+int xOver;
+uint16_t color = ILI9341_WHITE;
+int degreesymbol = 2;           // size of circle used for degree symbol
+char buf[5];                    // To convert temp to string so we can calculate how wide it is. Leave space for max plus terminator (-999) = 5
+
+
+    switch (currentScreen)
+    {
+        case SCREEN_AUTO:
+            x = OX + 80;
+            y = OY + 30;
+            iO = 40;        // How much space from indicator (I, E, A) to temp
+            rO = 32;        // How much vertical space for each row
+           
+            // Color
+            nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;   // Day or night-time on color
+            
+            // Overwrite prior
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(x, y);
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.print("I:"); 
+            tft.setCursor(x+iO, y);
+            if (InternalTemp.lastSensorPresent)
+            {
+                tft.print(InternalTemp.priorTemp);
+                sprintf(buf, "%i", InternalTemp.priorTemp);
+                xOver = x+iO+3+tft.strPixelLen(buf);    // How far over to put the symbol / min/max
+                tft.fillCircle(xOver, y+1, degreesymbol, CurrentBackgroundColor);      
+                tft.setFont(Arial_8);
+                tft.setCursor(xOver + 14, y-1);
+                tft.print(InternalTemp.priorSessionMaxTemp);
+                tft.setCursor(xOver + 14, y+13);
+                tft.print(InternalTemp.priorSessionMinTemp);              
+            }
+            else
+            {
+                tft.print("- -");
+            }
+            
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(x, y+rO);
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.print("E:");
+            tft.setCursor(x+iO, y+rO);
+            if (ExternalTemp.lastSensorPresent)
+            {            
+                tft.print(ExternalTemp.priorTemp);
+                sprintf(buf, "%i", ExternalTemp.priorTemp);
+                xOver = x+iO+3+tft.strPixelLen(buf);    
+                tft.fillCircle(xOver, y+rO+1, degreesymbol, CurrentBackgroundColor);     
+                tft.setFont(Arial_8);
+                tft.setCursor(xOver + 14, y+rO+1-1);
+                tft.print(ExternalTemp.priorSessionMaxTemp);
+                tft.setCursor(xOver + 14, y+rO+1+13);
+                tft.print(ExternalTemp.priorSessionMinTemp); 
+            }
+            else
+            {
+                tft.print("- -");
+            }
+            //* AUX TEMP
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(x, y+(rO*2));
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.print("A:");
+            tft.setCursor(x+iO, y+(rO*2));
+            if (AuxTemp.lastSensorPresent)
+            {
+                tft.print(AuxTemp.priorTemp);
+                sprintf(buf, "%i", AuxTemp.priorTemp);
+                xOver = x+iO+3+tft.strPixelLen(buf);    
+                tft.fillCircle(xOver, y+(rO*2)+1, degreesymbol, CurrentBackgroundColor);  
+                tft.setFont(Arial_8);
+                tft.setCursor(xOver + 14, y+(rO*2)+1-1);
+                tft.print(AuxTemp.priorSessionMaxTemp);
+                tft.setCursor(xOver + 14, y+(rO*2)+1+13);
+                tft.print(AuxTemp.priorSessionMinTemp);               
+            }
+            else
+            {
+                tft.print("- -");
+            }            
+
+            // Write current - Internal
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(x, y);
+            InternalTemp.sensorPresent ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+            tft.print("I:"); 
+            tft.setCursor(x+iO, y);
+            if (InternalTemp.sensorPresent)
+            {            
+                tft.print(InternalTemp.currentTemp);
+                sprintf(buf, "%i", InternalTemp.currentTemp);
+                xOver = x+iO+3+tft.strPixelLen(buf);    // How far over to put the symbol / min/max
+                tft.fillCircle(xOver, y+1, degreesymbol, color);                
+                tft.setFont(Arial_8);
+                tft.setCursor(xOver + 14, y-1);
+                tft.print(InternalTemp.sessionMaxTemp);
+                tft.setCursor(xOver + 14, y+13);
+                tft.print(InternalTemp.sessionMinTemp);
+            }
+            else
+            {
+                tft.print("- -");
+            }
+
+            // Write current - External
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(x, y+rO);
+            ExternalTemp.sensorPresent ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+            tft.print("E:");
+            tft.setCursor(x+iO, y+rO);
+            if (ExternalTemp.sensorPresent)
+            {  
+                tft.print(ExternalTemp.currentTemp);            
+                sprintf(buf, "%i", ExternalTemp.currentTemp);
+                xOver = x+iO+3+tft.strPixelLen(buf);
+                tft.fillCircle(xOver, y+rO+1, degreesymbol, color);
+                tft.setFont(Arial_8);
+                tft.setCursor(xOver + 14, y+rO+1-1);
+                tft.print(ExternalTemp.sessionMaxTemp);
+                tft.setCursor(xOver + 14, y+rO+1+13);
+                tft.print(ExternalTemp.sessionMinTemp);              
+            }
+            else
+            {
+                tft.print("- -");
+            }   
+            
+            // Write current - Aux
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(x, y+(rO*2));
+            AuxTemp.sensorPresent ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+            tft.print("A:");
+            tft.setCursor(x+iO, y+(rO*2));
+            if (AuxTemp.sensorPresent)
+            {            
+                tft.print(AuxTemp.currentTemp);
+                sprintf(buf, "%i", AuxTemp.currentTemp);
+                xOver = x+iO+3+tft.strPixelLen(buf);    
+                tft.fillCircle(xOver, y+(rO*2)+1, degreesymbol, color);
+                tft.setFont(Arial_8);
+                tft.setCursor(xOver + 14, y+(rO*2)+1-1);
+                tft.print(AuxTemp.sessionMaxTemp);
+                tft.setCursor(xOver + 14, y+(rO*2)+1+13);
+                tft.print(AuxTemp.sessionMinTemp);               
+            }
+            else
+            {
+                tft.print("- -");
+            }   
+    
+            // Save new text to last
+            InternalTemp.priorTemp = InternalTemp.currentTemp;
+            InternalTemp.priorSessionMaxTemp = InternalTemp.sessionMaxTemp;
+            InternalTemp.priorSessionMinTemp = InternalTemp.sessionMinTemp;
+            InternalTemp.lastSensorPresent = InternalTemp.sensorPresent;
+            ExternalTemp.priorTemp = ExternalTemp.currentTemp;
+            ExternalTemp.priorSessionMaxTemp = ExternalTemp.sessionMaxTemp;
+            ExternalTemp.priorSessionMinTemp = ExternalTemp.sessionMinTemp;            
+            ExternalTemp.lastSensorPresent = ExternalTemp.sensorPresent;
+            AuxTemp.priorTemp = AuxTemp.currentTemp;
+            AuxTemp.priorSessionMaxTemp = AuxTemp.sessionMaxTemp;
+            AuxTemp.priorSessionMinTemp = AuxTemp.sessionMinTemp;
+            AuxTemp.lastSensorPresent = AuxTemp.sensorPresent;
+
+            break;
+    }
+        
+    // Now we've displayed the info, we can clear this element
+    displayElement.clearDataFlag(gde_Temperature);
+    
+}
+
+void RenderTransmission()
+{
+int x = 0;
+int y = 0;  
+uint16_t color;
+static _TQC_STATE lastTQC;  // Torque converter lockup status
+static boolean lastOD;      // Overdrive
+static uint8_t lastBT;      // Baumann table
+
+    switch (currentScreen)
+    {
+        case SCREEN_AUTO:
+            x = OX + 250;
+            y = OY + 30;
+            break;
+    }  
+
+    // Color
+    nightTime ? color = TEXT_COLOR_NIGHT : color = COLOR_DARK_YELLOW;   // Day or night-time on color
+
+    // Trans box
+    tft.drawRect(x, y, 56, 123, color);
+    tft.fillRect(x, y, 56, 16, color);
+    tft.drawFastHLine(x, y+79, 56, color);
+    tft.setFont(Arial_9_Bold);
+    tft.setTextColor(CurrentBackgroundColor);
+    tft.setCursor(x+6, y+3);
+    tft.print("TRANS");
+    
+    // Font for rest
+    tft.setFont(Arial_12_Bold);
+    // Prior status
+    tft.setCursor(x+5, y+22);
+    tft.setTextColor(CurrentBackgroundColor);
+    tft.print("LOCK");
+    tft.setCursor(x+5, y+42);
+    tft.print("AUTO");
+    tft.setCursor(x+5, y+62);
+    tft.print("UNLK");
+    tft.setCursor(x+16, y+85);
+    tft.print("OD");        
+    tft.setCursor(x+20, y+105);
+    if (lastBT == 1)      tft.print("T1");
+    else if (lastBT == 2) tft.print("T2");
+    else                  tft.print("T?");
+        // Current warning
+        // Torque converter status
+        tft.setCursor(x+5, y+22);
+        TQCLockStatus == TQC_FORCE_LOCK ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+        tft.print("LOCK");
+        tft.setCursor(x+5, y+42);
+        TQCLockStatus == TQC_AUTO ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+        tft.print("AUTO");
+        tft.setCursor(x+5, y+62);
+        TQCLockStatus == TQC_FORCE_UNLOCK ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+        tft.print("UNLK");
+        // Overdrive
+        tft.setCursor(x+16, y+85);
+        OverdriveEnabled  ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);
+        tft.print("OD");        
+        // Baumann Table
+        tft.setCursor(x+20, y+105);
+        tft.setTextColor(color);
+        if (BaumannTable == 2)      tft.print("T2");
+        else 
+        {   // We only highlight if we have Baumann table 2 selected. 
+            // Otherwise we show the selection but there is no need to highlight. 
+            tft.setTextColor(COLOR_DESELECT);
+            if (BaumannTable == 1) tft.print("T1");
+            else                   tft.print("T?");
+        }
+        
+    // Save current to last
+    lastTQC = TQCLockStatus; 
+    lastOD = OverdriveEnabled;
+    lastBT = BaumannTable;
+
+    // Now we've displayed the info, we can clear this element
+    displayElement.clearDataFlag(gde_Transmission);
+}
+
+void RenderHamCB()
+{
+int x = 0;
+int y = 0;  
+uint16_t color;
+static boolean lastHam;
+
+    switch (currentScreen)
+    {
+        case SCREEN_AUTO:
+            x = OX + 0;
+            y = OY + 28;
+            break;
+    }  
+
+    // Color
+    nightTime ? color = TEXT_COLOR_NIGHT : color = COLOR_DARK_YELLOW;   // Day or night-time on color
+
+    // ON AIR box
+    tft.drawRect(x, y, 50, 61, color);
+    tft.fillRect(x, y, 50, 16, color);
+    tft.setFont(Arial_9_Bold);
+    tft.setTextColor(CurrentBackgroundColor);
+    tft.setCursor(x+2, y+3);
+    tft.print("ON AIR");
+    
+    // Font for Ham/CB
+    tft.setFont(Arial_13_Bold);
+    // Prior status
+    tft.setCursor(x+11, y+22);
+    tft.setTextColor(CurrentBackgroundColor);
+    tft.print("CB");
+    tft.setCursor(x+5, y+42);
+    tft.print("HAM");
+        // Current warning
+        tft.setCursor(x+11, y+22);
+        Ham_On ? tft.setTextColor(COLOR_DESELECT) : tft.setTextColor(color);
+        tft.print("CB");
+        tft.setCursor(x+5, y+42);
+        Ham_On ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT); 
+        tft.print("HAM");      
+
+    // Save current to last
+    lastHam = Ham_On; 
+
+    // Now we've displayed the info, we can clear this element
+    displayElement.clearDataFlag(gde_Radio);
+}
+
 void RenderFuelPump()
 {
 int xT = 0;     // Text location
 int yT = 0;  
 int xP = 0;     // Symbol location
 int yP = 0;     
-#define COLOR_PUMP_ON   0xFE60        // Yellow 255, 204, 0
 uint16_t pumpColor; 
-#define COLOR_PUMP_TEXT 0x3186        // Deselect 51,  51,  51      //  0x9CD3    // Grey 153, 153, 153 but too light
 uint16_t textColor; 
 static boolean lastPump;
 
@@ -100,9 +382,9 @@ static boolean lastPump;
     {
         case SCREEN_AUTO:
             xT = OX + 0;       // Text
-            yT = OY + 130;
+            yT = OY + 104;
             xP = OX + 20;       // Symbol
-            yP = OY + 160;
+            yP = OY + 129;
             break;
     }  
 
@@ -111,14 +393,14 @@ static boolean lastPump;
     // tft.setTextColor(color, CurrentBackgroundColor);
 
     // PUMP word - this never changes, so we don't have to overwrite first with background
-    textColor = COLOR_PUMP_TEXT;
-    tft.setFont(Arial_12_Bold);                  
+    textColor = COLOR_DESELECT;
+    tft.setFont(Arial_13_Bold);                  
     tft.setCursor(xT, yT);
     tft.setTextColor(textColor);
     tft.print("PUMP");
 
     // Symbol color
-    nightTime ? pumpColor = TEXT_COLOR_NIGHT : pumpColor = COLOR_PUMP_ON;      // Day or night-time on color
+    nightTime ? pumpColor = TEXT_COLOR_NIGHT : pumpColor = COLOR_DARK_YELLOW;   // Day or night-time on color
     if (!FuelPump) pumpColor = COLOR_DESELECT;                                  // Off color
 
     // Pump symbol is a circle with two lines coming out of it
@@ -139,6 +421,46 @@ static boolean lastPump;
     
 }
 
+void RenderLowAirWarn()
+{
+int x = 0;
+int y = 0;  
+uint16_t color;
+static boolean lastLowAir;
+
+    switch (currentScreen)
+    {
+        case SCREEN_AUTO:
+            x = OX + 5;
+            y = OY + 150;
+            break;
+    }  
+
+    // Font and Color
+    tft.setFont(Arial_13_Bold);
+    nightTime ? color = TEXT_COLOR_NIGHT : color = COLOR_DARK_YELLOW;   // Day or night-time on color
+    if (!LowAirWarning) color = COLOR_DESELECT;                         // Warning off color
+    
+    // Prior warning - overwrite
+    tft.setCursor(x+5, y);
+    tft.setTextColor(CurrentBackgroundColor);
+    tft.print("LO");
+    tft.setCursor(x, y+18);
+    tft.print("AIR");
+        // Current warning
+        tft.setCursor(x+5, y);
+        tft.setTextColor(color);
+        tft.print("LO");
+        tft.setCursor(x, y+18);
+        tft.print("AIR");      
+
+    // Save current to last
+    lastLowAir = LowAirWarning; 
+
+    // Now we've displayed the info, we can clear this element
+    displayElement.clearDataFlag(gde_Air);
+}
+
 void RenderSpeed()
 {
 int xS = 0;     // Speed location
@@ -153,10 +475,10 @@ static uint8_t lastHeading;
     switch (currentScreen)
     {
         case SCREEN_AUTO:
-            xS = OX + 110;      // Speed
+            xS = OX + 120;      // Speed
             yS = OY + 120;
             xH = OX + 222;      // Heading
-            yH = OY + 150;
+            yH = OY + 162;
             break;
     }      
 
@@ -175,26 +497,29 @@ static uint8_t lastHeading;
         tft.setCursor(xS, yS);  
         if (Speed < 10); tft.print(" ");        
         tft.print(Speed);
+        // Save current to last
+        lastSpeed = Speed;
     
     // MPH text - doesn't change, don't need to pre-write background color
     tft.setFont(Arial_20_Bold);
     tft.setCursor(xS + 8, yS + 58);
     tft.print("MPH");
 
-    // Heading
-    tft.setFont(Arial_24_Bold);
-    // Overwrite prior
-    tft.setTextColor(CurrentBackgroundColor);
-    tft.setCursor(xH + returnHeadingXOffset(lastHeading), yH);
-    tftPrintHeading(lastHeading);
-        // Write current
-        tft.setTextColor(textColor);
-        tft.setCursor(xH + returnHeadingXOffset(Heading), yH);
-        tftPrintHeading(Heading);
-    
-    // Save current to last
-    lastSpeed = Speed;
-    lastHeading = Heading;
+    // Heading - but only if speed is positive
+//    if (Speed > 0)
+//    {
+        tft.setFont(Arial_24_Bold);
+        // Overwrite prior
+        tft.setTextColor(CurrentBackgroundColor);
+        tft.setCursor(xH + returnHeadingXOffset(lastHeading), yH);
+        tftPrintHeading(lastHeading);
+            // Write current
+            tft.setTextColor(textColor);
+            tft.setCursor(xH + returnHeadingXOffset(Heading), yH);
+            tftPrintHeading(Heading);
+            // Save current to last
+            lastHeading = Heading;
+//    }
         
     // Now we've displayed the info, we can clear this element
     displayElement.clearDataFlag(gde_Speed);
@@ -274,15 +599,66 @@ void tftPrintHeading(uint8_t heading)
 
 void RenderAltitude()
 {
-    // Altitude
-    tft.setFont(Arial_13);
-    tft.setCursor(130, OY+200);
-    tft.print(" ");
-    tft.print("342 '");
-//    tft.print("9,840 ft");
+int x = 0;
+int y = 0;  
+uint16_t color = ILI9341_WHITE;
+static int16_t lastAltitude;
+
+    switch (currentScreen)
+    {
+        case SCREEN_AUTO:
+            x = OX + 120;
+            y = OY + 0;
+            break;
+    }  
+
+    // Arial
+    tft.setFont(Arial_13);                  
+    if (nightTime) color = TEXT_COLOR_NIGHT;
+    
+    // Prior altitude - overwrite
+    tft.setCursor(x, y);
+    tft.setTextColor(CurrentBackgroundColor);
+    if (lastAltitude > -1000 && lastAltitude < 1000) tft.print(" ");
+    tftPrintWithComma(lastAltitude);
+    tft.print(" '");
+        // Current altitude
+        tft.setCursor(x, y);
+        tft.setTextColor(color);
+        if (GPS_Altitude > -1000 && GPS_Altitude < 1000) tft.print(" ");
+        tftPrintWithComma(GPS_Altitude);        
+        tft.print(" '");
+
+    // Save current to last
+    lastAltitude = GPS_Altitude; 
 
     // Now we've displayed the info, we can clear this element
     displayElement.clearDataFlag(gde_Altitude);    
+    
+}
+
+void tftPrintWithComma(int16_t val) // Will not work right for exactly the value -32768!
+{
+    if (val < 0) 
+    {
+        val = -val;
+        tft.print("-");
+    }
+    
+    if (val >= 1000) 
+    {
+        int16_t v = val / 1000;
+        tft.print(v);
+        tft.print(",");
+        val = val - (v * 1000);
+        char buf[4];                // Generate a string with exactly 3 characters representing val (plus one for terminator)
+        sprintf(buf, "%03d", val);
+        tft.print(buf);
+    }
+    else 
+    {
+        tft.print(val);
+    }
 }
 
 void RenderDateTime()
@@ -335,6 +711,7 @@ static uint8_t last_fHour;
     // Time on the right - Overwrite
     tft.setTextColor(CurrentBackgroundColor);
     tft.setCursor(xT, y);
+    if (lastDT.hour < 10) tft.print(" ");
     if (lastDT.hour > 12) last_fHour = lastDT.hour - 12;
     tft.print(last_fHour);
     tft.print(":");
@@ -344,6 +721,7 @@ static uint8_t last_fHour;
         // Time on the Right - Current
         tft.setTextColor(color);
         tft.setCursor(xT, y);
+        if (DT.hour < 10) tft.print(" ");
         if (DT.hour > 12) fHour = DT.hour - 12; 
         tft.print(fHour);
         tft.print(":");
@@ -434,20 +812,28 @@ uint16_t final_color;
 
 void RenderGPS()
 {
-    static uint8_t lastNumSats = 0;
-    int x = 0;
-    int y = 0;
-    uint16_t gps_color;
-    // size of circles
-    int r_inner = 7;
-    int r_outer = 11;
+static uint8_t lastNumSats = 0;
+int x = 0;
+int y = 0;
+uint16_t gps_color;
+// size of circles
+int r_inner = 7;
+int r_outer = 11;
 
-    GPS_Fix ? gps_color = GPS_GREEN : gps_color = GPS_RED;
+#define GPS_GREEN           0x0300          // 0, 99, 0
+#define GPS_RED             0x5000          // 84, 0, 0
+
+    
+    if (GPS_Fix)
+    {
+        nightTime ? gps_color = TEXT_COLOR_NIGHT : gps_color = GPS_GREEN;
+    }
+    else  gps_color = GPS_RED;
     
     switch (currentScreen)
     {
         case SCREEN_AUTO:
-            x = OX + 210;
+            x = OX + 220;
             y = OY + 5;
             break;
 
@@ -495,52 +881,6 @@ void RenderGPS()
     return;
 }
 
-void RenderTemperature()
-{
-    int x, y;
-    uint16_t color = ILI9341_WHITE;
-    int degreesymbol = 4;   // size of circle used for degree symbol
-
-    static uint16_t lastInternalTemp;
-    static uint16_t lastExternalTemp;
-    static uint16_t lastAuxTemp;
-
-/*
-    switch (currentScreen)
-    {
-        case SCREEN_AUTO:
-            x = 40;
-            y = 70;
-            tft.setFont(Aubrey_48);                  // See the .h file for the list of sizes
-//            tft.setTextSize(6);
-            // Clear old text by over-writing it in the background color
-            tft.setCursor(OX+x, OY+y);
-            tft.setTextColor(CurrentBackgroundColor);
-                tft.print(lastInternalTemp);
-                tft.print(" / ");
-                tft.print(lastExternalTemp);            
-            // Now write the new text
-            tft.setCursor(OX+x, OY+y);
-            nightTime ? tft.setTextColor(TEXT_COLOR_NIGHT) : tft.setTextColor(color);
-                tft.print(InternalTemp);
-                tft.print(" / ");
-                tft.print(ExternalTemp);
-            // Save new text to last
-            lastInternalTemp = InternalTemp;
-            lastExternalTemp = ExternalTemp;
-            lastAuxTemp = AuxTemp;
-            // Symbol
-//            tft.fillCircle(OX+x, OY+y, degreesymbol, color);
-            break;
-    }
-        
-    // Now we've displayed the info, we can clear this element
-    displayElement.clearDataFlag(gde_Temperature);
-*/
-    
-}
-
-
 void UpdateAllElements()
 {
     displayElement.setAllDataFlags();
@@ -556,10 +896,14 @@ void InitTempStructs(void)
         if (i == TS_EXTERNAL) { ts = &ExternalTemp; }
         if (i == TS_AUX)      { ts = &AuxTemp;      }
 
+        ts->sensorPresent = false;
+        ts->lastSensorPresent = false; 
         ts->currentTemp = 999;
         ts->priorTemp = 999;
         ts->sessionMinTemp = 999;
+        ts->priorSessionMinTemp = 999;
         ts->sessionMaxTemp = 999;
+        ts->priorSessionMaxTemp = 999;
         ts->allTimeMinTemp = 999;
         ts->allTimeMinDT = getBlankDateTime();        
         ts->allTimeMaxTemp = 999;
