@@ -30,7 +30,7 @@
     // SERIAL   
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         usb_serial_class                        *DebugSerial;       // Which serial port to print debug messages to (HardwareSerial is equal to Serial0/Serial Port 0/USART0)
-        boolean DEBUG                           = true;             // Print debugging messages to the PC
+        boolean DEBUG                           = false;             // Print debugging messages to the PC
         #define MegaSerial                      Serial1             // What serial port are we communicating with the Mega on
 
         #define SENTENCE_BYTES                  5                   // How many bytes in a valid sentence. 
@@ -87,30 +87,24 @@
         int16_t OX                              = 5;                // Offset left
         int16_t OY                              = 15;               // Offset top
 
-
     // ROTARY ENCODER / PUSHBUTTON
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         Encoder knob(ROT_A, ROT_B);
         long knobPosition =                     -999;
         OP_Button InputButton = OP_Button(ROT_C, true, true, 25);   // Initialize a button object. Set pin, internal pullup = true, inverted = true, debounce time = 25 mS
         enum {BUTTON_WAIT, BUTTON_TO_WAIT};
-        uint8_t ButtonState              = BUTTON_WAIT;             //The current button state machine state
+        uint8_t ButtonState                     = BUTTON_WAIT;      // The current button state machine state
+        boolean RotarySwap                      = true;             // Swap the direction of movement
+
 
     // MY GRAPHIC DATA ELEMENTS
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         gde displayElement;                                         // Of type gde (graphic display element) - my gde class constructor
-
-        #define SCREEN_MENU                     0
-        #define SCREEN_AUTO                     1
-        #define SCREEN_SPEED                    2
-        #define SCREEN_TEMP                     3
-        uint8_t currentScreen                   = SCREEN_AUTO;      // What screen are we on
         
         // Brightness
         #define ADJUST_BRIGHTNESS_TIMEOUT       4000                // How long do we stay in adjust brightness mode until we automatically exit
         int TimerID_adjustBrightness            = 0;
         uint8_t BacklightPWM                    = 255;              // What backlight strength to start (0-255)
-        boolean adjustBrightness                = false;            // Are we adjusting the brightness on the screen
 
         // Nighttime text color
         boolean nightTime                       = false;            // Night time means put all text on the screen to green
@@ -122,6 +116,63 @@
         #define COLOR_DESELECT                  0x3186              // 51,  51,  51
         #define COLOR_DARK_YELLOW               0xF400              // 241, 128, 0
 
+
+    // SCREENS
+    //--------------------------------------------------------------------------------------------------------------------------------------------------->>    
+        #define SCREEN_MENU                     0
+        #define SCREEN_AUTO                     1
+        #define SCREEN_SPEED                    2
+        #define SCREEN_TEMP                     3
+        #define SCREEN_MAX_SCREEN               3                   // Number of last in the list
+        
+        int8_t currentScreen                   = SCREEN_AUTO;       // What screen are we on (SIGNED)
+
+        #define NUM_MENUS                       10
+        
+        #define MENU_SET_ALT_TO_GPS             0
+        #define MENU_SET_ALT                    1
+        #define MENU_SET_HOME_COORD             2
+        #define MENU_SET_HOME_ALT               3
+        #define MENU_SET_DEFAULT_SCREEN         4
+        #define MENU_SET_TIMEZONE               5
+        #define MENU_CLEAR_ALLTIME_TEMP_I       6
+        #define MENU_CLEAR_ALLTIME_TEMP_E       7
+        #define MENU_CLEAR_ALLTIME_TEMP_A       8
+        #define MENU_EXIT_MENU                  9
+
+        #define MENU_DEFAULT_MENU               MENU_SET_ALT_TO_GPS 
+        
+        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Default Screen", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Exit Menu"};
+        int8_t currentMenu                      = 0;                // What menu item are we on (SIGNED) 
+        boolean inMenu                          = false;            // Have we entered the menu screen
+        boolean inSelection                     = false;            // Have we entered a menu item
+
+        struct _menu_item{
+            boolean enabled;
+            boolean entered;
+            boolean val_YN;                     // True if Yes, False if No
+            int16_t val_Int;                    // Integer value
+            boolean complete;                   // Are we trying to complete the action (aka, hit enter)
+            uint8_t cmdToMega;                  // What is the command this menu item sends to the Mega
+            uint8_t valueToMega;                // If a value is to be sent
+            uint8_t modifierToMega;             // If a modifier is to be sent
+            boolean success;                    // Was the action successful (may require a response from the Mega)
+        };
+        _menu_item Menu[NUM_MENUS];
+
+    // KNOB STATE MACHINE
+    //--------------------------------------------------------------------------------------------------------------------------------------------------->>    
+        boolean adjustBrightness                = false;            // Are we adjusting the brightness on the screen
+
+        typedef char _KNOB_STATE;                                   // State machine for knob control
+        #define KS_ADJUST_BRIGHTNESS            0
+        #define KS_CHANGE_SCREEN                1
+        #define KS_CHANGE_MENU                  2
+        #define KS_ADJUST_VAL                   3
+        #define KS_DEFAULT                      KS_CHANGE_SCREEN
+        _KNOB_STATE knobState                   = KS_CHANGE_SCREEN;
+        
+    
     // GLOBAL VARS - TO STORE INCOMING DATA
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         boolean GPS_Fix                         = false;
@@ -221,36 +272,6 @@ void setup()
         Serial.begin(USB_BAUD_RATE); 
         MegaSerial.begin(USB_BAUD_RATE);                            // Serial used to communicate with the Mega
 
-    // Wait
-    // -------------------------------------------------------------------------------------------------------------------------------------------------->    
-        // The button library will return a wasPressed when we first boot, unless we do two reads farther apart than debounce time. 
-        // It can also be useful to give a bit of time so the serial port can init
-        InputButton.read();
-        delay(100);
-        InputButton.read();
-
-    // Load EEPROM
-    // -------------------------------------------------------------------------------------------------------------------------------------------------->
-        boolean did_we_init = eeprom.begin();                       // begin() will initialize EEPROM if it never has been before, and load all EEPROM settings into our ramcopy struct
-        if (did_we_init && DEBUG) { Serial.println(F("EEPROM Initalized")); }    
-
-    // TFT
-    // -------------------------------------------------------------------------------------------------------------------------------------------------->
-        tft.begin();
-        FullBrightness();
-        tft.setRotation(tftRotation);
-        tft.fillScreen(CurrentBackgroundColor);
-
-        tft.setFontAdafruit();                      // To go back to default font
-        tft.setTextSize(6);                         // Then use this to set text size, instead of specifying the size in the custom font name.
-        
-//        tft.setFont(Arial_60);                  // See the .h file for the list of sizes
-//        tft.setTextColor(ILI9341_WHITE);
-//        tft.setCursor(OX, OY);      // x (left), y (top)
-//        tft.println("65");        
-
-
-
     // GRAPHIC DISPLAY ELEMENTS
     // -------------------------------------------------------------------------------------------------------------------------------------------------->    
         displayElement.setupElement(gde_GPS, RenderGPS);                    // GPS display
@@ -265,24 +286,41 @@ void setup()
         displayElement.setupElement(gde_Air, RenderLowAirWarn);             // Low air warning
         displayElement.setupElement(gde_Radio, RenderHamCB);                // Ham/CB
         displayElement.setupElement(gde_Transmission, RenderTransmission);  // Transmission settings
+        displayElement.setupElement(gde_Menu, RenderMenu);                  // Menu items
+            SetupMenus();
 
-        UpdateAllElements();                                                // Update everything to start
-/*
-    gde_Alarm, 
-    gde_Ign,
-*/
+    // Load EEPROM
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->
+        boolean did_we_init = eeprom.begin();                       // begin() will initialize EEPROM if it never has been before, and load all EEPROM settings into our ramcopy struct
+        if (did_we_init && DEBUG) { Serial.println(F("EEPROM Initalized")); }    
+            
+    // TFT
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->
+        tft.begin();
+        FullBrightness();
+        tft.setRotation(tftRotation);
+
+    // Clear inputs
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->    
+        // The button library will return a wasPressed when we first boot, unless we do two reads farther apart than debounce time. 
+        // It can also be useful to give a bit of time so the serial port can init. I've also had issues with the rotary being read and setting the screen
+        InputButton.read();
+        knob.read();
+        delay(100);
+        InputButton.read();
+        knob.read();
+        HandleRotary();
+        
+    // Set screen explicitly
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->          
+        ClearScreen(); 
+        currentScreen = SCREEN_MENU;
+        UpdateAllElements();
 }
-
 
 
 void loop()
 {
-//    CheckAndFillVars();
-
-//    static uint32_t     TimeLastSerial = 0;                     // Time of last received serial data
-
-//    Serial.println(adjustBrightness);
-
     CheckSerial();                                              // Communication from the Mega
     HandleRotary();                                             // Take care of the rotary encoder/push-button
     timer.run();
@@ -291,210 +329,8 @@ void loop()
     {
         if (displayElement.hasData(i)) displayElement.renderElement(i);
     }
-
-
-}
-
-
-void CheckAndFillVars()
-{
-
-
-
-//    if (ETin.receiveData())
-//    {
-/*
-        // digitalWrite(13, rxdata.buttonstate);
-        // myservo.write(map(rxdata.servoval, 0, 1023, 0, 179));
-
-        // HERE WE MUST CHECK EACH AND EVERY VARIABLE FOR CHANGES
-
-        // GPS_FIX
-        //----------------------------------------------------------------------------------------->>
-        if (GPS_FIX != rxdata.GPS_FIX)
-        {
-            GPS_FIX = rxdata.GPS_FIX;
-            // This will affect all elements related to the GPS
-            displayElement.setDataFlag(gde_GPS);
-            displayElement.setDataFlag(gde_Speed);
-            displayElement.setDataFlag(gde_Heading);
-        }
-
-        // TorqueConverter
-        //----------------------------------------------------------------------------------------->>
-        if (TorqueConverter != rxdata.TorqueConverter)
-        {
-            TorqueConverter = rxdata.TorqueConverter;
-            displayElement.setDataFlag(gde_Transmission);
-        }
-
-        // Overdrive
-        //----------------------------------------------------------------------------------------->>
-        if (Overdrive != rxdata.Overdrive)
-        {
-            Overdrive = rxdata.Overdrive;
-            displayElement.setDataFlag(gde_Transmission);
-        }
-
-        // CB_SEL
-        //----------------------------------------------------------------------------------------->>
-        if (CB_SEL != rxdata.CB_SEL)
-        {
-            CB_SEL = rxdata.CB_SEL;
-            displayElement.setDataFlag(gde_Radio);
-        }
-
-        // FuelPump
-        //----------------------------------------------------------------------------------------->>
-        if (FuelPump != rxdata.FuelPump)
-        {
-            FuelPump = rxdata.FuelPump;
-            displayElement.setDataFlag(gde_FuelPump);
-        }
-            
-        // BaumannTable2
-        //----------------------------------------------------------------------------------------->>
-        if (BaumannTable2 != rxdata.BaumannTable2)
-        {
-            BaumannTable2 = rxdata.BaumannTable2;
-            displayElement.setDataFlag(gde_Transmission);
-        }
-
-        // BaumannSS1
-        //----------------------------------------------------------------------------------------->>
-        if (BaumannSS1 != rxdata.BaumannSS1)
-        {
-            BaumannSS1 = rxdata.BaumannSS1;
-            displayElement.setDataFlag(gde_Transmission);
-        }
-
-        // ViperArmed
-        //----------------------------------------------------------------------------------------->>
-        if (ViperArmed != rxdata.ViperArmed)
-        {
-            ViperArmed = rxdata.ViperArmed;
-            displayElement.setDataFlag(gde_Alarm);
-        }
-
-        // ViperTripped
-        //----------------------------------------------------------------------------------------->>
-        if (ViperTripped != rxdata.ViperTripped)
-        {
-            ViperTripped = rxdata.ViperTripped;
-            displayElement.setDataFlag(gde_Alarm);
-        }
-
-        // AirWarning
-        //----------------------------------------------------------------------------------------->>
-        if (AirWarning != rxdata.AirWarning)
-        {
-            AirWarning = rxdata.AirWarning;
-            displayElement.setDataFlag(gde_Air);
-        }
-
-        // IndoorTemp & OutdoorTemp
-        //----------------------------------------------------------------------------------------->>
-        if ((IndoorTemp != rxdata.IndoorTemp) || (OutdoorTemp != rxdata.OutdoorTemp))
-        {
-            IndoorTemp = rxdata.IndoorTemp;
-            OutdoorTemp = rxdata.OutdoorTemp;
-            displayElement.setDataFlag(gde_Temperature);
-        }
-
-        // Altimeter
-        //----------------------------------------------------------------------------------------->>
-        if (Altimeter != rxdata.Altimeter)
-        {
-            Altimeter = rxdata.Altimeter;
-            displayElement.setDataFlag(gde_Altitude);
-        }
-
-        // Speedometer
-        //----------------------------------------------------------------------------------------->>
-        if (Speedometer != rxdata.Speedometer)
-        {
-            Speedometer = rxdata.Speedometer;
-            displayElement.setDataFlag(gde_Speed);
-        }
-
-        // Voltage
-        //----------------------------------------------------------------------------------------->>
-        if (Voltage != rxdata.Voltage)
-        {
-            Voltage = rxdata.Voltage;
-            displayElement.setDataFlag(gde_Voltage);
-        }
-*/
-//    }
-
-    return;
 }
 
 
 
-
-
-/*
-    //first, lets read our button and store it in our data structure
-    if(!digitalRead(12))
-        txdata.buttonstate = HIGH;
-    else
-        txdata.buttonstate = LOW;
-    //then we will go ahead and send that data out
-        ETout.sendData();
-*/
-  
-
-/*
-int x = 0;
-int ditlength = 25;
-int readout = 125;
-int hundreds = 0;
-int tens = 0;
-int ones = 0;
-
-typedef void (* displayElementPtr) (); // this is a typedef to my displayElement functions
-*/
-
-
-//the following declares an arry of 10 function pointers of type DigitFuncPtr 
-/*
-displayElementPtr dElement[10] = {zero,one,two,three,four,five,six,seven,eight,nine};
-
-void zero(void) {dash(); dash(); dash(); dash(); dash(); pause();};
-void one(void) { dit(); dash(); dash(); dash(); dash(); pause();};
-void two(void) {dit(); dit(); dash(); dash(); dash(); pause();};
-void three(void) {dit(); dit(); dit(); dash(); dash(); pause();};
-void four(void) {dit(); dit(); dit(); dit(); dash(); pause();};
-void five(void) {dit(); dit(); dit(); dit(); dit(); pause();};
-void six(void) {dash(); dit();dit();dit();dit(); pause();};
-void seven(void) {dash(); dash(); dit(); dit(); dit(); pause();};
-void eight(void) {dash(); dash(); dash(); dit(); dit(); pause();};
-void nine(void) {dash(); dash(); dash(); dash(); dit(); pause();}; 
-void dit() {
-   Serial.print(".");
-}
-void dash() {
- Serial.print("-");
-}
-void pause(){
- Serial.println("" );
-}
-void loop() {
-for(int i = 0; i < 10; i ++){
- Serial.print(i);
- Serial.print("= ");
-// numeral[i]();   // this calls each of the 10 digit functions
-}
- Serial.println(readout);
- hundreds = int(readout/100);
- tens = int((readout - (hundreds*100))/10);
- ones = int(((readout - (hundreds*100)) - (tens*10)));
-// numeral[hundreds]();
-// numeral[tens]();
-// numeral[ones]();
- Serial.println("");
- delay(1000);
-}
-*/
 

@@ -27,7 +27,7 @@
 #endif
 
 // maximum number of elements
-const static int NUM_ELEMENTS = 13;
+const static int NUM_ELEMENTS = 12;
 
 enum elementNames {
 	gde_Transmission = 0,
@@ -37,12 +37,11 @@ enum elementNames {
 	gde_Speed,      // Includes heading
 	gde_Radio,
 	gde_FuelPump, 
-	gde_Alarm, 
 	gde_Air, 
-	gde_Ign,
 	gde_Voltage, 
     gde_GSM, 
-    gde_DateTime
+    gde_DateTime,
+    gde_Menu
 };
 	
 typedef void (*gde_callback)(void);

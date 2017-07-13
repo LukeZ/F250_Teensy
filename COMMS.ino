@@ -92,6 +92,7 @@ _tempsensor *ts;
 boolean regularDT = true; 
 static uint8_t volts;
 static int TimerID_VoltageWarning = 0;
+static boolean lastFix = false; 
     
     switch (sentence->Command)
     {
@@ -170,8 +171,22 @@ static int TimerID_VoltageWarning = 0;
 
         case CMD_GPS_FIX:
             GPS_Fix = (boolean)sentence->Value; 
-            GPS_Fix ? GPS_FixQuality = sentence->Modifier : GPS_FixQuality = 0;
-            if (!GPS_Fix) GPS_NumSatellites = 0;
+            if (GPS_Fix)
+            {
+                GPS_FixQuality = sentence->Modifier;
+                Menu[MENU_SET_ALT_TO_GPS].enabled = true;       // Enable GPS menu items
+                Menu[MENU_SET_HOME_COORD].enabled = true;
+                if (lastFix != GPS_Fix && currentScreen == SCREEN_MENU ) displayElement.setDataFlag(gde_Menu);
+            }
+            else
+            {
+                GPS_FixQuality = 0;
+                GPS_NumSatellites = 0;
+                Menu[MENU_SET_ALT_TO_GPS].enabled = false;       // Disable GPS menu items
+                Menu[MENU_SET_HOME_COORD].enabled = false;                
+                if (lastFix != GPS_Fix && currentScreen == SCREEN_MENU ) displayElement.setDataFlag(gde_Menu);
+            }
+            lastFix = GPS_Fix;
             displayElement.setDataFlag(gde_GPS);
             break;
 
@@ -357,6 +372,12 @@ static int TimerID_VoltageWarning = 0;
                 BaumannTable = sentence->Value;
                 displayElement.setDataFlag(gde_Transmission);
             }
+            break;
+
+        case CMD_ACTION_TAKEN:
+            // This is a response back from the Mega letting us know it received our request to do something. 
+            // We can set a flag on whatever the current menu item is to let us know it was successful.
+            Menu[currentMenu].success = true;
             break;
 
     }

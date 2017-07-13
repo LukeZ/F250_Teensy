@@ -1,6 +1,8 @@
 
 void HandleRotary()
 {
+elapsedMillis waitForResponse;
+
     // CHECK THE BUTTON
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
     InputButton.read();
@@ -14,6 +16,80 @@ void HandleRotary()
                 switch (currentScreen)
                 {
                     case SCREEN_MENU:
+                        if (!inMenu)
+                        {
+                            knobState = KS_CHANGE_MENU;
+                            inMenu = true;
+                        }
+                        else
+                        {
+                            // Here we are selecting some menu item or action
+                            if (currentMenu == MENU_EXIT_MENU)
+                            {   // Exit menu
+                                currentScreen = SCREEN_AUTO;    // Go back to main screen
+                                knobState = KS_CHANGE_SCREEN;
+                                currentMenu = MENU_DEFAULT_MENU;
+                                inMenu = false;
+                                // Clear item settings
+                                for (uint8_t i=0; i<NUM_MENUS; i++)
+                                {
+                                    Menu[i].entered = false;        // But we are not presently in it
+                                    Menu[i].val_YN = false;         // Default to "No"
+                                    Menu[i].val_Int = 0;            // Default value to 0
+                                    Menu[i].complete = false;       // Action not yet complete
+                                }                                        
+                                ClearScreen();
+                                UpdateAllElements();
+                            }
+                            else if (!Menu[currentMenu].entered)    // If this is the first button press, we are "entering" the menu item
+                            {
+                                Menu[currentMenu].entered = true;   // We are inside the menu
+                                Menu[currentMenu].success = false;  // Clear flag, it will get set on exit
+                                inSelection = true;
+                            }
+                            else
+                            {
+                                // We had already entered this menu item, so now the button press is doing something                         
+                                switch (currentMenu)
+                                {   // All these are Yes / No actions so we can deal with them the same
+                                    case MENU_SET_ALT_TO_GPS:
+                                    case MENU_SET_HOME_COORD: 
+                                    case MENU_SET_HOME_ALT: 
+                                    case MENU_CLEAR_ALLTIME_TEMP_I: 
+                                    case MENU_CLEAR_ALLTIME_TEMP_E: 
+                                    case MENU_CLEAR_ALLTIME_TEMP_A: 
+                                        if (Menu[currentMenu].entered)
+                                        {
+                                            // We are pushing the button on a selection within this menu
+                                            Menu[currentMenu].complete = Menu[currentMenu].val_YN;      // Is the user trying to complete yes or no
+                                            if (Menu[currentMenu].val_YN)                               // If Yes, proceed
+                                            {
+                                                Menu[currentMenu].success = false;                      // Clear the success flag
+                                                SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
+                                                waitForResponse = 0;
+                                                while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS)
+                                                {
+                                                    CheckSerial();                                      // Wait for a response
+                                                }
+                                            }
+                                            // Now exit
+                                            Menu[currentMenu].entered = false;
+                                            inSelection = false;
+                                        }
+                                        break;
+
+                                    case MENU_SET_TIMEZONE: 
+                                        break; 
+                                                                                
+                                    case MENU_SET_ALT: 
+                                        break;
+                                        
+                                    case MENU_SET_DEFAULT_SCREEN: 
+                                        break;
+                                }
+                            }
+                        }
+                        displayElement.setDataFlag(gde_Menu);
                         break;
 
                     default:
@@ -44,16 +120,67 @@ void HandleRotary()
     // CHECK THE ROTARY
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
     long kp;
+    long kp_diff;
     kp = knob.read() / 4;
+    kp_diff = kp - knobPosition;
+    if (RotarySwap) kp_diff = -kp_diff;
     if (kp != knobPosition) 
     {
-        if (adjustBrightness)
+        switch (knobState)
         {
-            // In this case, the knob position adjusts the brightness of the screen
-            AdjustBacklight(kp - knobPosition);
+            case KS_ADJUST_BRIGHTNESS:
+                // In this case, the knob position adjusts the brightness of the screen
+                AdjustBacklight(kp_diff);
+                break;
+
+            case KS_CHANGE_SCREEN:
+                // Rotary changes screen
+                currentScreen += (kp_diff);
+                if (currentScreen < 0) currentScreen = SCREEN_MAX_SCREEN;
+                if (currentScreen > SCREEN_MAX_SCREEN) currentScreen = 0;
+
+                ClearScreen();              // Clear screen
+                UpdateAllElements();        // Set to new
+                break;
+
+            case KS_CHANGE_MENU:
+                // Rotary changes menu item, or selects/alters menu sub-item
+                if (!inSelection)
+                {
+                    // We are not within a selection yet, so here we change the menu item
+                    currentMenu += (kp_diff);
+                    if (currentMenu >= NUM_MENUS) currentMenu = 0;
+                    if (currentMenu < 0) currentMenu = NUM_MENUS - 1;   // For zero based
+                    displayElement.setDataFlag(gde_Menu);
+                }
+                else
+                {
+                    // We are within a menu item so the rotary is adjusting/selecting a value
+                    switch (currentMenu)
+                    {   // All these are Yes / No actions so we can deal with them the same
+                        case MENU_SET_ALT_TO_GPS:
+                        case MENU_SET_HOME_COORD: 
+                        case MENU_SET_HOME_ALT: 
+                        case MENU_CLEAR_ALLTIME_TEMP_I: 
+                        case MENU_CLEAR_ALLTIME_TEMP_E: 
+                        case MENU_CLEAR_ALLTIME_TEMP_A: 
+                            Menu[currentMenu].val_YN = !Menu[currentMenu].val_YN;   // Toggle between yes / no
+                            break;
+
+                        case MENU_SET_ALT: 
+                            break;
+
+                        case MENU_SET_DEFAULT_SCREEN: 
+                            break;
+
+                        case MENU_SET_TIMEZONE: 
+                            break;
+                    }                    
+                    displayElement.setDataFlag(gde_Menu);
+                }
+                break;
         }
         knobPosition = kp;
-        // Serial.print("Knob = "); Serial.print(kp); Serial.println();
     }
 }
 
@@ -82,8 +209,9 @@ void ReStartAdjustBrightness()
 
 void StartAdjustBrightness()
 {   
-    adjustBrightness = true;        // Set flag
-    ResetKnob();                    // Set the knob to zero to start
+    adjustBrightness = true;                // Set flag
+    knobState = KS_ADJUST_BRIGHTNESS;       // Set knob state
+    ResetKnob();                            // Set the knob to zero to start
     TimerID_adjustBrightness = timer.setTimeout(ADJUST_BRIGHTNESS_TIMEOUT, StopAdjustBrightness);
     if (DEBUG) Serial.println(F("Start adjust backlight"));    
 }
@@ -91,29 +219,20 @@ void StartAdjustBrightness()
 void StopAdjustBrightness()
 {
     adjustBrightness = false;       // Set flag
+    knobState = KS_DEFAULT;         // Knob state back to default
     if (TimerID_adjustBrightness > 0) timer.deleteTimer(TimerID_adjustBrightness);
     if (DEBUG) Serial.println(F("Stop adjust backlight"));
 }
 
 void AdjustBacklight(long kp)
 {
-    #define PWM_INCREMENT   16
+#define PWM_INCREMENT   16
     kp = BacklightPWM + (PWM_INCREMENT * kp);
     kp = constrain(kp, 0, 255);    
     BacklightPWM = (uint8_t)kp;
     setBacklight(BacklightPWM);
     ReStartAdjustBrightness();
     if (DEBUG) { Serial.print(F("Backlight: ")); Serial.println(kp); }     
-}
-
-void setBacklight(uint8_t PWM)
-{
-    analogWrite(TFT_PWM, PWM);
-}
-
-void FullBrightness()
-{
-    setBacklight(255);
 }
 
 
