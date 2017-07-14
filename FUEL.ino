@@ -21,6 +21,8 @@ uint16_t textColor;
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_FuelPump);        
             return;
             break;  
     }  

@@ -18,8 +18,9 @@ static uint32_t lastBlink = millis();
             y = OY + 0;
             break;
         
-        default:
-            // Do nothing
+        default:    // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_Voltage);            
             return;
             break;            
     }  

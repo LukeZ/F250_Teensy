@@ -22,6 +22,8 @@ uint16_t final_color;
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_GSM);        
             return;
             break;  
     }

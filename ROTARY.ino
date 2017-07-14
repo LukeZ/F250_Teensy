@@ -41,33 +41,32 @@ elapsedMillis waitForResponse;
                                 ClearScreen();
                                 UpdateAllElements();
                             }
-                            else if (!Menu[currentMenu].entered)    // If this is the first button press, we are "entering" the menu item
+                            else if (Menu[currentMenu].enabled)     // Ignore button presses on menu items that are not enabled
                             {
-                                Menu[currentMenu].entered = true;   // We are inside the menu
-                                Menu[currentMenu].success = false;  // Clear flag, it will get set on exit
-                                inSelection = true;
-                            }
-                            else
-                            {
-                                // We had already entered this menu item, so now the button press is doing something                         
-                                switch (currentMenu)
-                                {   // All these are Yes / No actions so we can deal with them the same
-                                    case MENU_SET_ALT_TO_GPS:
-                                    case MENU_SET_HOME_COORD: 
-                                    case MENU_SET_HOME_ALT: 
-                                    case MENU_CLEAR_ALLTIME_TEMP_I: 
-                                    case MENU_CLEAR_ALLTIME_TEMP_E: 
-                                    case MENU_CLEAR_ALLTIME_TEMP_A: 
-                                        if (Menu[currentMenu].entered)
-                                        {
+                                if (!Menu[currentMenu].entered)     // If not entered means this is the first button press, so we are "entering" the menu item 
+                                {
+                                    Menu[currentMenu].entered = true;   // We are inside the menu
+                                    Menu[currentMenu].success = false;  // Clear flag, it will get set on exit
+                                    inSelection = true;
+                                }
+                                else                                // We had already entered this menu item, so now the button press is doing something
+                                {
+                                    switch (currentMenu)
+                                    {   // All these are Yes / No actions so we can deal with them the same
+                                        case MENU_SET_ALT_TO_GPS:
+                                        case MENU_SET_HOME_COORD: 
+                                        case MENU_SET_HOME_ALT: 
+                                        case MENU_CLEAR_ALLTIME_TEMP_I: 
+                                        case MENU_CLEAR_ALLTIME_TEMP_E: 
+                                        case MENU_CLEAR_ALLTIME_TEMP_A: 
                                             // We are pushing the button on a selection within this menu
                                             Menu[currentMenu].complete = Menu[currentMenu].val_YN;      // Is the user trying to complete yes or no
                                             if (Menu[currentMenu].val_YN)                               // If Yes, proceed
                                             {
-                                                Menu[currentMenu].success = false;                      // Clear the success flag
+                                                Menu[currentMenu].success = false;                      // Clear the success flag while we wait for a response
                                                 SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
                                                 waitForResponse = 0;
-                                                while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS)
+                                                while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
                                                 {
                                                     CheckSerial();                                      // Wait for a response
                                                 }
@@ -75,17 +74,29 @@ elapsedMillis waitForResponse;
                                             // Now exit
                                             Menu[currentMenu].entered = false;
                                             inSelection = false;
-                                        }
-                                        break;
+                                            break;
+    
+                                        case MENU_SET_TIMEZONE: 
+                                            // We are pushing a button to select a timezone
+                                            Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
+                                            Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
+                                            SendMega(RCV_CMD_SET_TIMEZONE, DT.timezone);                // Tell the Mega to change timezone to value stored in Int
+                                            waitForResponse = 0;
+                                            while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
+                                            {
+                                                CheckSerial();                                      // Wait for a response
+                                            }
+                                            // Now exit
+                                            Menu[currentMenu].entered = false;
+                                            inSelection = false;
+                                            break; 
 
-                                    case MENU_SET_TIMEZONE: 
-                                        break; 
-                                                                                
-                                    case MENU_SET_ALT: 
-                                        break;
-                                        
-                                    case MENU_SET_DEFAULT_SCREEN: 
-                                        break;
+                                        case MENU_SET_ALT: 
+                                            break;
+                                            
+                                        case MENU_SET_DEFAULT_SCREEN: 
+                                            break;
+                                    }
                                 }
                             }
                         }
@@ -119,6 +130,7 @@ elapsedMillis waitForResponse;
 
     // CHECK THE ROTARY
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
+    int16_t tmp;
     long kp;
     long kp_diff;
     kp = knob.read() / 4;
@@ -148,7 +160,7 @@ elapsedMillis waitForResponse;
                 if (!inSelection)
                 {
                     // We are not within a selection yet, so here we change the menu item
-                    currentMenu += (kp_diff);
+                    currentMenu += kp_diff;
                     if (currentMenu >= NUM_MENUS) currentMenu = 0;
                     if (currentMenu < 0) currentMenu = NUM_MENUS - 1;   // For zero based
                     displayElement.setDataFlag(gde_Menu);
@@ -167,13 +179,18 @@ elapsedMillis waitForResponse;
                             Menu[currentMenu].val_YN = !Menu[currentMenu].val_YN;   // Toggle between yes / no
                             break;
 
-                        case MENU_SET_ALT: 
+                        case MENU_SET_TIMEZONE: 
+                            // Here we are rotating through the 5 timezones
+                            tmp = (int16_t)DT.timezone + kp_diff;                   // Convert to signed so we can go negative
+                            if      (tmp >= NUM_TIMEZONES) DT.timezone = 0;
+                            else if (tmp < 0) DT.timezone = NUM_TIMEZONES-1;        // Zero based
+                            else    DT.timezone = (uint8_t)tmp;
                             break;
 
                         case MENU_SET_DEFAULT_SCREEN: 
                             break;
 
-                        case MENU_SET_TIMEZONE: 
+                        case MENU_SET_ALT:
                             break;
                     }                    
                     displayElement.setDataFlag(gde_Menu);

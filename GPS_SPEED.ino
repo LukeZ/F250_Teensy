@@ -31,6 +31,8 @@ int r_outer = 11;
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_GPS);        
             return;
             break;  
     }
@@ -99,6 +101,8 @@ static uint8_t lastHeading;
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_Speed);        
             return;
             break;  
     }      

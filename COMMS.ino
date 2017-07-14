@@ -233,7 +233,7 @@ static boolean lastFix = false;
             break;
 
         case CMD_YEAR:  
-            // Value holds year after 2000
+            // Value holds year after 2000, Modifier holds timezone
 
             // Date might be a timestamp for one of the temp sensors
             regularDT = true;
@@ -242,12 +242,16 @@ static boolean lastFix = false;
                 if (i == TS_INTERNAL) { ts = &InternalTemp; }
                 if (i == TS_EXTERNAL) { ts = &ExternalTemp; }
                 if (i == TS_AUX)      { ts = &AuxTemp;      }            
-                if      (ts->updateMinDT_Flag) { ts->allTimeMinDT.year = sentence->Value; regularDT = false; }
-                else if (ts->updateMaxDT_Flag) { ts->allTimeMaxDT.year = sentence->Value; regularDT = false; }
+                if      (ts->updateMinDT_Flag) { ts->allTimeMinDT.year = sentence->Value; ts->allTimeMinDT.timezone = sentence->Modifier; regularDT = false; }
+                else if (ts->updateMaxDT_Flag) { ts->allTimeMaxDT.year = sentence->Value; ts->allTimeMaxDT.timezone = sentence->Modifier; regularDT = false; }
             }
             
             // Ok, this is just the regular time
-            if (regularDT) DT.year = sentence->Value;
+            if (regularDT) 
+            {
+                DT.year = sentence->Value;
+                DT.timezone = sentence->Modifier;
+            }
 
             // Only update on hour/minute
             break;

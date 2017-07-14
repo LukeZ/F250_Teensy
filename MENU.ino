@@ -64,25 +64,31 @@ int8_t topMenu;
             Menu[currentMenu].entered ? DrawMenuEnterBox(x, y) : DrawMenuSelectBox(x, y);
 
             // Is there some message or item to display? 
-            switch (currentMenu)
-            {   // All these are Yes / No actions so we can deal with them the same
-                case MENU_SET_ALT_TO_GPS:
-                case MENU_SET_HOME_COORD: 
-                case MENU_SET_HOME_ALT: 
-                case MENU_CLEAR_ALLTIME_TEMP_I: 
-                case MENU_CLEAR_ALLTIME_TEMP_E: 
-                case MENU_CLEAR_ALLTIME_TEMP_A:                 
-                    if (Menu[currentMenu].entered) DrawYesNoMenuItems(x, y, Menu[currentMenu].val_YN);
-                    break;
+            if (Menu[currentMenu].entered)
+            {
+                switch (currentMenu)
+                {   // All these are Yes / No actions so we can deal with them the same
+                    case MENU_SET_ALT_TO_GPS:
+                    case MENU_SET_HOME_COORD: 
+                    case MENU_SET_HOME_ALT: 
+                    case MENU_CLEAR_ALLTIME_TEMP_I: 
+                    case MENU_CLEAR_ALLTIME_TEMP_E: 
+                    case MENU_CLEAR_ALLTIME_TEMP_A:                 
+                         DrawYesNoMenuItems(x, y, Menu[currentMenu].val_YN);
+                        break;
+    
+                    case MENU_SET_TIMEZONE: 
+                        DrawTimeZoneSelections(x, y, DT.timezone);
+                        break;
+                        
+                    case MENU_SET_ALT: 
+                        break;
+                    case MENU_SET_DEFAULT_SCREEN: 
+                        break;
+    
+                }
+            }            
 
-                case MENU_SET_ALT: 
-                    break;
-                case MENU_SET_DEFAULT_SCREEN: 
-                    break;
-                case MENU_SET_TIMEZONE: 
-                    break;
-            }
-            
             // Now we've displayed the info, we can clear this element
             displayElement.clearDataFlag(gde_Menu);
             break;
@@ -153,6 +159,37 @@ uint16_t color;
         tft.setCursor(x + MENU_WIDTH_SELECT_BOX + 60, y + (3 * MENU_ROW_OFFSET));
         tft.setTextColor(CurrentBackgroundColor);
         tft.print("NO");
+    }
+}
+
+void DrawTimeZoneSelections(int x, int y, uint8_t tz)
+{
+uint16_t color;
+int startX;
+int startY;
+#define tzOffset 20
+
+    tft.setFont(Arial_16_Bold);
+    nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;
+
+    const char* tzName[NUM_TIMEZONES] = {"A", "P", "M", "C", "E"};  // Alaska, Pacific, Mountain, Central, Eastern
+
+    startX = x + MENU_WIDTH_SELECT_BOX;
+    startY = y + (3 * MENU_ROW_OFFSET);
+    
+    for (uint8_t i=0; i<NUM_TIMEZONES; i++)
+    {
+        if (i == tz)    // Highlighted entry
+        {
+            tft.fillRect(startX + (tzOffset * i) - 2, startY - 7, 20, 31, COLOR_DARK_YELLOW);
+            tft.setTextColor(CurrentBackgroundColor);
+        }
+        else            // Not-selected entry
+        {
+            tft.setTextColor(color);            
+        }
+        tft.setCursor(startX + (tzOffset * i), startY);
+        tft.print(tzName[i]);
     }
 }
 

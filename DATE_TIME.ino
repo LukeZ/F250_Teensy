@@ -21,6 +21,8 @@ static uint8_t last_fHour;
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_DateTime);        
             return;
             break;  
     }      
@@ -57,23 +59,25 @@ static uint8_t last_fHour;
     tft.setTextColor(CurrentBackgroundColor);
     tft.setCursor(xT, y);
     if (lastDT.hour < 10) tft.print(" ");
+    last_fHour = lastDT.hour;
     if (lastDT.hour > 12) last_fHour = lastDT.hour - 12;
     tft.print(last_fHour);
     tft.print(":");
     if (lastDT.minute < 10) tft.print("0");
     tft.print(lastDT.minute);
-    lastDT.hour < 13 ? tft.print(" AM") : tft.print(" PM");
+    lastDT.hour < 12 ? tft.print(" AM") : tft.print(" PM");
         // Time on the Right - Current
         tft.setTextColor(color);
         tft.setCursor(xT, y);
         if (DT.hour < 10) tft.print(" ");
+        fHour = DT.hour;
         if (DT.hour > 12) fHour = DT.hour - 12; 
         tft.print(fHour);
         tft.print(":");
         if (DT.minute < 10) tft.print("0");
         tft.print(DT.minute);
-        DT.hour < 13 ? tft.print(" AM") : tft.print(" PM");
-    
+        DT.hour < 12 ? tft.print(" AM") : tft.print(" PM");
+   
     // Save current to last
     CopyDateTime(DT, &lastDT);
     
@@ -107,6 +111,7 @@ _datetime getBlankDateTime()
     dt.month = 1;
     dt.day = 1;
     dt.hour = dt.minute = dt.second = 0;
+    dt.timezone = 0;
     return dt;
 }
 
@@ -118,6 +123,7 @@ void CopyDateTime(_datetime FromDT, _datetime *ToDT)
     ToDT->year = FromDT.year;
     ToDT->month = FromDT.month;
     ToDT->day = FromDT.day;
+    ToDT->day = FromDT.timezone;
 }
 
 

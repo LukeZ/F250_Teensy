@@ -17,6 +17,8 @@ static uint8_t lastBT;      // Baumann table
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_Transmission);        
             return;
             break;  
     }  

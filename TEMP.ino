@@ -177,6 +177,8 @@ char buf[5];                    // To convert temp to string so we can calculate
             break;
 
         default:        // Do nothing
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_Temperature);        
             return;
             break;  
     }
