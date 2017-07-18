@@ -14,6 +14,7 @@ uint16_t textColor;
     switch (currentScreen)
     {
         case SCREEN_AUTO:
+        case SCREEN_ALTITUDE:
             xT = OX + 0;       // Text
             yT = OY + 104;
             xP = OX + 20;       // Symbol

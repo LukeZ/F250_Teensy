@@ -15,6 +15,7 @@ static uint8_t last_fHour;
     switch (currentScreen)
     {
         case SCREEN_AUTO:
+        case SCREEN_ALTITUDE:
             xD = OX + 0;   // across - date
             xT = OX + 230;  // across - time
             y = OY + 200;

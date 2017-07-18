@@ -26,6 +26,7 @@ int r_outer = 11;
     switch (currentScreen)
     {
         case SCREEN_AUTO:
+        case SCREEN_ALTITUDE:
             x = OX + 220;
             y = OY + 5;
             break;

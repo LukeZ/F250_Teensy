@@ -60,3 +60,15 @@ void tftPrintWithComma(int16_t val) // Will not work right for exactly the value
         tft.print(val);
     }
 }
+
+int16_t RoundToNearestTen(int16_t val)
+{
+    val = (val + 5) / 10;
+    return val * 10;
+}
+
+
+
+
+
+    

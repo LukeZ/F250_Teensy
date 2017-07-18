@@ -11,6 +11,7 @@ uint16_t color;
     switch (currentScreen)
     {
         case SCREEN_AUTO:
+        case SCREEN_ALTITUDE:
             x = OX + 0;
             y = OY + 28;
             break;

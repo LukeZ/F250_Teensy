@@ -35,7 +35,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print(InternalTemp.priorTemp);
                 sprintf(buf, "%i", InternalTemp.priorTemp);
                 xOver = x+iO+3+tft.strPixelLen(buf);    // How far over to put the symbol / min/max
-                tft.fillCircle(xOver, y+1, degreesymbol, CurrentBackgroundColor);      
+                tft.drawCircle(xOver, y+1, degreesymbol, CurrentBackgroundColor);      
                 tft.setFont(Arial_8);
                 tft.setCursor(xOver + 14, y-1);
                 tft.print(InternalTemp.priorSessionMaxTemp);
@@ -57,7 +57,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print(ExternalTemp.priorTemp);
                 sprintf(buf, "%i", ExternalTemp.priorTemp);
                 xOver = x+iO+3+tft.strPixelLen(buf);    
-                tft.fillCircle(xOver, y+rO+1, degreesymbol, CurrentBackgroundColor);     
+                tft.drawCircle(xOver, y+rO+1, degreesymbol, CurrentBackgroundColor);     
                 tft.setFont(Arial_8);
                 tft.setCursor(xOver + 14, y+rO+1-1);
                 tft.print(ExternalTemp.priorSessionMaxTemp);
@@ -79,7 +79,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print(AuxTemp.priorTemp);
                 sprintf(buf, "%i", AuxTemp.priorTemp);
                 xOver = x+iO+3+tft.strPixelLen(buf);    
-                tft.fillCircle(xOver, y+(rO*2)+1, degreesymbol, CurrentBackgroundColor);  
+                tft.drawCircle(xOver, y+(rO*2)+1, degreesymbol, CurrentBackgroundColor);  
                 tft.setFont(Arial_8);
                 tft.setCursor(xOver + 14, y+(rO*2)+1-1);
                 tft.print(AuxTemp.priorSessionMaxTemp);
@@ -102,7 +102,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print(InternalTemp.currentTemp);
                 sprintf(buf, "%i", InternalTemp.currentTemp);
                 xOver = x+iO+3+tft.strPixelLen(buf);    // How far over to put the symbol / min/max
-                tft.fillCircle(xOver, y+1, degreesymbol, color);                
+                tft.drawCircle(xOver, y+1, degreesymbol, color);                
                 tft.setFont(Arial_8);
                 tft.setCursor(xOver + 14, y-1);
                 tft.print(InternalTemp.sessionMaxTemp);
@@ -125,7 +125,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print(ExternalTemp.currentTemp);            
                 sprintf(buf, "%i", ExternalTemp.currentTemp);
                 xOver = x+iO+3+tft.strPixelLen(buf);
-                tft.fillCircle(xOver, y+rO+1, degreesymbol, color);
+                tft.drawCircle(xOver, y+rO+1, degreesymbol, color);
                 tft.setFont(Arial_8);
                 tft.setCursor(xOver + 14, y+rO+1-1);
                 tft.print(ExternalTemp.sessionMaxTemp);
@@ -148,7 +148,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print(AuxTemp.currentTemp);
                 sprintf(buf, "%i", AuxTemp.currentTemp);
                 xOver = x+iO+3+tft.strPixelLen(buf);    
-                tft.fillCircle(xOver, y+(rO*2)+1, degreesymbol, color);
+                tft.drawCircle(xOver, y+(rO*2)+1, degreesymbol, color);
                 tft.setFont(Arial_8);
                 tft.setCursor(xOver + 14, y+(rO*2)+1-1);
                 tft.print(AuxTemp.sessionMaxTemp);

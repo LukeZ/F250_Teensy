@@ -123,7 +123,8 @@
         #define SCREEN_AUTO                     1
         #define SCREEN_SPEED                    2
         #define SCREEN_TEMP                     3
-        #define SCREEN_MAX_SCREEN               3                   // Number of last in the list
+        #define SCREEN_ALTITUDE                 4       
+        #define SCREEN_MAX_SCREEN               4                   // Number of last in the list
         
         int8_t currentScreen                   = SCREEN_AUTO;       // What screen are we on (SIGNED)
 
@@ -207,9 +208,13 @@
         _tempsensor ExternalTemp;
         _tempsensor AuxTemp;
 
-        // Altitude
+        // Altitude / Barometric pressure
         int16_t GPS_Altitude                    = 0;
-        int16_t Barometric_Altitude             = 0;
+        int16_t Pressure_Altitude               = 0;
+        float inHg                              = 0.0;  // Barometric pressure in inches of mercury
+        float Pressure                          = 0.0;  // Baromtric pressure in kPa
+        boolean UsePressureAltitude             = false;    // Should we display altitude based on the barometer true/false, if false show GPS
+        int16_t Home_Altitude                   = 0;    // What is the home altitude. This may be given us by the Mega, or if we set it ourselves we will also know it. 
 
         // Voltage
         float Voltage                           = 0;

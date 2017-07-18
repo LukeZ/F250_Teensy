@@ -17,7 +17,7 @@ elapsedMillis waitForResponse;
                 {
                     case SCREEN_MENU:
                         if (!inMenu)
-                        {
+                        {   // This "enters" the menu, meaning we can now scroll through the menu items
                             knobState = KS_CHANGE_MENU;
                             inMenu = true;
                         }
@@ -48,6 +48,10 @@ elapsedMillis waitForResponse;
                                     Menu[currentMenu].entered = true;   // We are inside the menu
                                     Menu[currentMenu].success = false;  // Clear flag, it will get set on exit
                                     inSelection = true;
+
+                                    // We initialize these altitude set menus to start with
+                                    if (currentMenu == MENU_SET_ALT)        Menu[MENU_SET_ALT].val_Int = RoundToNearestTen(Pressure_Altitude);  // Init to current pressure altitude
+                                    if (currentMenu == MENU_SET_HOME_ALT)   Menu[MENU_SET_HOME_ALT].val_Int = RoundToNearestTen(GPS_Altitude);  // Would be better to init to current home altitude
                                 }
                                 else                                // We had already entered this menu item, so now the button press is doing something
                                 {
@@ -55,7 +59,6 @@ elapsedMillis waitForResponse;
                                     {   // All these are Yes / No actions so we can deal with them the same
                                         case MENU_SET_ALT_TO_GPS:
                                         case MENU_SET_HOME_COORD: 
-                                        case MENU_SET_HOME_ALT: 
                                         case MENU_CLEAR_ALLTIME_TEMP_I: 
                                         case MENU_CLEAR_ALLTIME_TEMP_E: 
                                         case MENU_CLEAR_ALLTIME_TEMP_A: 
@@ -91,7 +94,24 @@ elapsedMillis waitForResponse;
                                             inSelection = false;
                                             break; 
 
+                                        case MENU_SET_HOME_ALT: 
                                         case MENU_SET_ALT: 
+                                            // A button press here means we have finished setting the altitude and we can return to the main menu
+                                            if (currentMenu == MENU_SET_HOME_ALT) Home_Altitude = Menu[currentMenu].val_Int;    // Save the home altitude if that's what we've just adjusted
+                                            Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
+                                            Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
+                                            Menu[currentMenu].valueToMega = Menu[currentMenu].val_Int / 100;    // Value -    Number of feet over 100, divided by 100
+                                            Menu[currentMenu].modifierToMega = Menu[currentMenu].val_Int % 100; // Modifier - Number of feet under 100
+                                            
+                                            SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
+                                            waitForResponse = 0;
+                                            while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
+                                            {
+                                                CheckSerial();                                      // Wait for a response
+                                            }
+                                            // Now exit
+                                            Menu[currentMenu].entered = false;
+                                            inSelection = false;                                            
                                             break;
                                             
                                         case MENU_SET_DEFAULT_SCREEN: 
@@ -172,7 +192,6 @@ elapsedMillis waitForResponse;
                     {   // All these are Yes / No actions so we can deal with them the same
                         case MENU_SET_ALT_TO_GPS:
                         case MENU_SET_HOME_COORD: 
-                        case MENU_SET_HOME_ALT: 
                         case MENU_CLEAR_ALLTIME_TEMP_I: 
                         case MENU_CLEAR_ALLTIME_TEMP_E: 
                         case MENU_CLEAR_ALLTIME_TEMP_A: 
@@ -191,6 +210,8 @@ elapsedMillis waitForResponse;
                             break;
 
                         case MENU_SET_ALT:
+                        case MENU_SET_HOME_ALT: 
+                            Menu[currentMenu].val_Int += (kp_diff * 10);            // Change by 10 foot increments
                             break;
                     }                    
                     displayElement.setDataFlag(gde_Menu);

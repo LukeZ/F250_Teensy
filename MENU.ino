@@ -70,7 +70,6 @@ int8_t topMenu;
                 {   // All these are Yes / No actions so we can deal with them the same
                     case MENU_SET_ALT_TO_GPS:
                     case MENU_SET_HOME_COORD: 
-                    case MENU_SET_HOME_ALT: 
                     case MENU_CLEAR_ALLTIME_TEMP_I: 
                     case MENU_CLEAR_ALLTIME_TEMP_E: 
                     case MENU_CLEAR_ALLTIME_TEMP_A:                 
@@ -82,7 +81,11 @@ int8_t topMenu;
                         break;
                         
                     case MENU_SET_ALT: 
+                    case MENU_SET_HOME_ALT: 
+                            tft.setCursor(x + MENU_WIDTH_SELECT_BOX + 3, y + (3 * MENU_ROW_OFFSET));
+                            tftPrintWithComma(Menu[currentMenu].val_Int);
                         break;
+                        
                     case MENU_SET_DEFAULT_SCREEN: 
                         break;
     

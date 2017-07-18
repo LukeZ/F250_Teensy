@@ -14,6 +14,7 @@ static uint32_t lastBlink = millis();
     switch (currentScreen)
     {
         case SCREEN_AUTO:
+        case SCREEN_ALTITUDE:
             x = OX + 0;
             y = OY + 0;
             break;

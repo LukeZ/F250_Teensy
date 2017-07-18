@@ -232,6 +232,33 @@ static boolean lastFix = false;
             }
             break;
 
+        case CMD_PRESSURE_ALTITUDE_POS:
+        case CMD_PRESSURE_ALTITUDE_NEG:
+            temp = (sentence->Value * 100) + sentence->Modifier;
+            if (sentence->Command == CMD_PRESSURE_ALTITUDE_NEG) temp = -temp;
+            if (Pressure_Altitude != temp)
+            {
+                Pressure_Altitude = temp;
+                displayElement.setDataFlag(gde_Altitude);
+            }
+            break;
+
+        case CMD_HOME_ALT:
+            Home_Altitude = (sentence->Value * 100) + sentence->Modifier;
+            // I don't think we need to do a screen update, this only gets sent once at the beginning of startup, or when manually changed
+            break;
+
+        case CMD_PRESSURE_MERCURY:
+            inHg = (float)sentence->Value + ((float)sentence->Modifier / 100.0);   // Value is integer inches, modifier is the 2 digit decimal fraction
+            Pressure = convert_inHG_kPa(inHg);
+            displayElement.setDataFlag(gde_Altitude); 
+            break;
+
+        case CMD_USE_PRESSURE_ALT:
+            UsePressureAltitude = sentence->Value;
+            displayElement.setDataFlag(gde_Altitude);             
+            break;
+
         case CMD_YEAR:  
             // Value holds year after 2000, Modifier holds timezone
 

@@ -12,6 +12,7 @@ static uint8_t lastBT;      // Baumann table
     switch (currentScreen)
     {
         case SCREEN_AUTO:
+        case SCREEN_ALTITUDE:
             x = OX + 250;
             y = OY + 30;
             break;
