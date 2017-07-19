@@ -15,7 +15,7 @@ static uint8_t last_fHour;
     switch (currentScreen)
     {
         case SCREEN_AUTO:
-        case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             xD = OX + 0;   // across - date
             xT = OX + 230;  // across - time
             y = OY + 200;
@@ -37,7 +37,7 @@ static uint8_t last_fHour;
 
     // Font & color
     tft.setFont(Arial_13);                  
-    if (nightTime) color = TEXT_COLOR_NIGHT;
+    if (nightTime) color = NightColor;
     
     // Date on the left - Overwrite
     tft.setTextColor(CurrentBackgroundColor);
@@ -124,7 +124,7 @@ void CopyDateTime(_datetime FromDT, _datetime *ToDT)
     ToDT->year = FromDT.year;
     ToDT->month = FromDT.month;
     ToDT->day = FromDT.day;
-    ToDT->day = FromDT.timezone;
+    ToDT->timezone = FromDT.timezone;
 }
 
 

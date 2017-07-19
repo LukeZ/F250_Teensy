@@ -52,6 +52,7 @@ elapsedMillis waitForResponse;
                                     // We initialize these altitude set menus to start with
                                     if (currentMenu == MENU_SET_ALT)        Menu[MENU_SET_ALT].val_Int = RoundToNearestTen(Pressure_Altitude);  // Init to current pressure altitude
                                     if (currentMenu == MENU_SET_HOME_ALT)   Menu[MENU_SET_HOME_ALT].val_Int = RoundToNearestTen(GPS_Altitude);  // Would be better to init to current home altitude
+                                    if (currentMenu == MENU_ADJUST_NIGHT_COLOR) nightTime = true;       // Set the scheme to night-time to help us adjust it
                                 }
                                 else                                // We had already entered this menu item, so now the button press is doing something
                                 {
@@ -72,6 +73,12 @@ elapsedMillis waitForResponse;
                                                 while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
                                                 {
                                                     CheckSerial();                                      // Wait for a response
+                                                }
+                                                
+                                                if (currentMenu == MENU_SET_ALT_TO_GPS && Menu[currentMenu].success) 
+                                                {   // Also if successful, save the time of this barometric adjustment
+                                                    CopyDateTime(DT,&eeprom.ramcopy.lastAltitudeAdjust);  // Save the time of last adjustment if that's what we've just selected
+                                                    EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
                                                 }
                                             }
                                             // Now exit
@@ -96,22 +103,79 @@ elapsedMillis waitForResponse;
 
                                         case MENU_SET_HOME_ALT: 
                                         case MENU_SET_ALT: 
-                                            // A button press here means we have finished setting the altitude and we can return to the main menu
-                                            if (currentMenu == MENU_SET_HOME_ALT) Home_Altitude = Menu[currentMenu].val_Int;    // Save the home altitude if that's what we've just adjusted
-                                            Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
-                                            Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
-                                            Menu[currentMenu].valueToMega = Menu[currentMenu].val_Int / 100;    // Value -    Number of feet over 100, divided by 100
-                                            Menu[currentMenu].modifierToMega = Menu[currentMenu].val_Int % 100; // Modifier - Number of feet under 100
-                                            
-                                            SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
-                                            waitForResponse = 0;
-                                            while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
+                                            if (!Menu[currentMenu].subMenu_entered)
                                             {
-                                                CheckSerial();                                      // Wait for a response
+                                                if (Menu[currentMenu].val_YN)                               
+                                                {
+                                                    // They have pushed the button while highlighting the altitude number, so now we let them edit it. There is no exiting now
+                                                    // other than by editing the number
+                                                    Menu[currentMenu].subMenu_entered = true;
+                                                }
+                                                else
+                                                {
+                                                    // They are highlighting the "X" and want to exit without changing anything
+                                                    Menu[currentMenu].complete = false;     // Nothing was completed
+                                                    Menu[currentMenu].success = true;       // This actually doesn't matter here since we did nothing
+                                                    Menu[currentMenu].entered = false;
+                                                    inSelection = false;   
+                                                }
                                             }
-                                            // Now exit
-                                            Menu[currentMenu].entered = false;
-                                            inSelection = false;                                            
+                                            else
+                                            {
+                                                // They decided to edit the number, and now they pressed the button again to indicate they are finished
+                                                // A button press here means we have finished setting the altitude and we can return to the main menu
+                                                if (currentMenu == MENU_SET_HOME_ALT) Home_Altitude = Menu[currentMenu].val_Int;    // Save the home altitude if that's what we've just adjusted
+                                                if (currentMenu == MENU_SET_ALT) 
+                                                {
+                                                    CopyDateTime(DT,&eeprom.ramcopy.lastAltitudeAdjust);  // Save the time of last adjustment if that's what we've just selected
+                                                    EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
+                                                }
+                                                Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
+                                                Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
+                                                Menu[currentMenu].subMenu_entered = false;                  // Clear the sub-menu flag
+                                                Menu[currentMenu].valueToMega = Menu[currentMenu].val_Int / 100;    // Value -    Number of feet over 100, divided by 100
+                                                Menu[currentMenu].modifierToMega = Menu[currentMenu].val_Int % 100; // Modifier - Number of feet under 100
+                                                SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
+                                                waitForResponse = 0;
+                                                while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
+                                                {
+                                                    CheckSerial();                                      // Wait for a response
+                                                }
+                                                // Now exit
+                                                Menu[currentMenu].entered = false;
+                                                inSelection = false;                                            
+                                            }
+                                            break;
+                                        
+                                        case MENU_ADJUST_NIGHT_COLOR:
+                                            if (!Menu[currentMenu].subMenu_entered)
+                                            {
+                                                switch (Menu[currentMenu].val_Int)
+                                                {
+                                                    case 0:     // R
+                                                    case 1:     // G
+                                                    case 2:     // B
+                                                        // They have pushed the button while highlighting either R, G, or B, so now we let them edit it. 
+                                                        Menu[currentMenu].subMenu_entered = true;
+                                                        break;
+                                                    case 3:     // X - cancel
+                                                        // They are highlighting the "X" and want to exit without our changes
+                                                        NightColor = tft.color565(Night_R, Night_G, Night_B);   // Update night color, although it's probably not necessary to do it here
+                                                        eeprom.ramcopy.NightColor = NightColor;                 // Set to ramcopy
+                                                        EEPROM.updateInt(offsetof(_eeprom_data, NightColor), eeprom.ramcopy.NightColor); // Also to EEPROM
+                                                        Menu[currentMenu].complete = true;      // The color has been changed
+                                                        Menu[currentMenu].success = true;       
+                                                        Menu[currentMenu].entered = false;
+                                                        inSelection = false;
+                                                        break;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                // They were within a submenu, ie editing R, G, or B, and now they pushed the button and want to get back out
+                                                NightColor = tft.color565(Night_R, Night_G, Night_B);   // Update night color, although it's probably not necessary to do it here
+                                                Menu[currentMenu].subMenu_entered = false;              // Let them out
+                                            }
                                             break;
                                             
                                         case MENU_SET_DEFAULT_SCREEN: 
@@ -206,12 +270,49 @@ elapsedMillis waitForResponse;
                             else    DT.timezone = (uint8_t)tmp;
                             break;
 
-                        case MENU_SET_DEFAULT_SCREEN: 
-                            break;
-
                         case MENU_SET_ALT:
                         case MENU_SET_HOME_ALT: 
-                            Menu[currentMenu].val_Int += (kp_diff * 10);            // Change by 10 foot increments
+                            if (!Menu[currentMenu].subMenu_entered) Menu[currentMenu].val_YN = !Menu[currentMenu].val_YN;   // Toggle between adjust number / cancel
+                            else Menu[currentMenu].val_Int += (kp_diff * 10);            // Change number by 10 foot increments
+                            break;
+
+                        case MENU_ADJUST_NIGHT_COLOR:
+                             if (!Menu[currentMenu].subMenu_entered)
+                             {
+                                // We are cycling through R, G, B, X
+                                // We represent these as 0,1,2,3 in val_Int
+                                Menu[currentMenu].val_Int += kp_diff;                   
+                                if      (Menu[currentMenu].val_Int > 3 ) Menu[currentMenu].val_Int = 0;
+                                else if (Menu[currentMenu].val_Int < 0)  Menu[currentMenu].val_Int = 3;
+                             }
+                             else
+                             {
+                                // Here we have selected R, G, or B and we want to adjust them
+                                switch (Menu[currentMenu].val_Int)
+                                {
+                                    case 0:     // R
+                                        tmp = (int16_t)Night_R + kp_diff;
+                                        tmp = constrain(tmp, 0, 255);   // keep to 0-255
+                                        Night_R = (uint8_t)tmp;
+                                        break;
+                                    case 1:     // G
+                                        tmp = (int16_t)Night_G + kp_diff;
+                                        tmp = constrain(tmp, 0, 255);   // keep to 0-255
+                                        Night_G = (uint8_t)tmp;
+                                        break;
+                                    case 2:     // B
+                                        tmp = (int16_t)Night_B + kp_diff;
+                                        tmp = constrain(tmp, 0, 255);   // keep to 0-255
+                                        Night_B = (uint8_t)tmp;
+                                        break;
+                                }
+                             }
+
+                            
+                             NightColor = tft.color565(Night_R, Night_G, Night_B);
+                             break;
+                        
+                        case MENU_SET_DEFAULT_SCREEN: 
                             break;
                     }                    
                     displayElement.setDataFlag(gde_Menu);

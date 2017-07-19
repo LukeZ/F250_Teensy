@@ -13,6 +13,7 @@ static uint8_t lastBT;      // Baumann table
     {
         case SCREEN_AUTO:
         case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             x = OX + 250;
             y = OY + 30;
             break;
@@ -25,7 +26,7 @@ static uint8_t lastBT;      // Baumann table
     }  
 
     // Color
-    nightTime ? color = TEXT_COLOR_NIGHT : color = COLOR_DARK_YELLOW;   // Day or night-time on color
+    nightTime ? color = NightColor : color = COLOR_DARK_YELLOW;   // Day or night-time on color
 
     // Trans box
     tft.drawRect(x, y, 56, 123, color);

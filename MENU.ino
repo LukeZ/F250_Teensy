@@ -24,7 +24,7 @@ int8_t topMenu;
             
             // Font and color
             tft.setFont(Arial_16_Bold);
-            nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;
+            nightTime ? color = NightColor : color = ILI9341_WHITE;
             ClearScreen();
 
             // Initialize loop list
@@ -82,11 +82,14 @@ int8_t topMenu;
                         
                     case MENU_SET_ALT: 
                     case MENU_SET_HOME_ALT: 
-                            tft.setCursor(x + MENU_WIDTH_SELECT_BOX + 3, y + (3 * MENU_ROW_OFFSET));
-                            tftPrintWithComma(Menu[currentMenu].val_Int);
+                        DrawEditNumber(x + MENU_WIDTH_SELECT_BOX - 20, y + (3 * MENU_ROW_OFFSET), Menu[currentMenu].val_YN, Menu[currentMenu].subMenu_entered);
                         break;
                         
                     case MENU_SET_DEFAULT_SCREEN: 
+                        break;
+
+                    case MENU_ADJUST_NIGHT_COLOR:
+                        DrawEditNightColor(x + MENU_WIDTH_SELECT_BOX - 50, y + (3 * MENU_ROW_OFFSET), Menu[currentMenu].val_Int, Menu[currentMenu].subMenu_entered);
                         break;
     
                 }
@@ -103,7 +106,6 @@ int8_t topMenu;
 
     }
 }
-
 
 
 void DrawMenuSelectBox(int x, int y)
@@ -137,7 +139,7 @@ void DrawYesNoMenuItems(int x, int y, boolean YN)
 uint16_t color;
 
     tft.setFont(Arial_16_Bold);
-    nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;
+    nightTime ? color = NightColor : color = ILI9341_WHITE;
 
     if (YN)
     {
@@ -173,7 +175,7 @@ int startY;
 #define tzOffset 20
 
     tft.setFont(Arial_16_Bold);
-    nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;
+    nightTime ? color = NightColor : color = ILI9341_WHITE;
 
     const char* tzName[NUM_TIMEZONES] = {"A", "P", "M", "C", "E"};  // Alaska, Pacific, Mountain, Central, Eastern
 
@@ -196,12 +198,139 @@ int startY;
     }
 }
 
+void DrawEditNumber(int x, int y, boolean YN, boolean subEntered)
+{
+uint16_t color;
+
+    tft.setFont(Arial_16_Bold);
+    nightTime ? color = NightColor : color = ILI9341_WHITE;
+
+    if (!subEntered)
+    {
+        // Here we are cycling back and forth between highlighting number or the X
+        if (YN)
+        {
+            // Number highlighted
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.fillRect(x, y - 7, 90, 31, COLOR_DARK_YELLOW);
+            tft.setCursor(x + 10, y);
+            tftPrintWithComma(Menu[currentMenu].val_Int);
+            
+            // X is not highlighted
+            tft.setTextColor(color);
+            tft.setCursor(x + 104, y);
+            tft.print("X");
+        }
+        else
+        {
+            // Number highlighted
+            tft.setTextColor(color);
+            tft.setCursor(x + 10, y);
+            tftPrintWithComma(Menu[currentMenu].val_Int);
+        
+            // X is highlighted
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.fillRect(x + 98, y - 7, 25, 31, COLOR_DARK_YELLOW);
+            tft.setCursor(x + 104, y);
+            tft.print("X");
+        }
+    }
+    else
+    {
+        // In this case we are editing the number, just display it
+        tft.setCursor(x + 10, y);
+        tftPrintWithComma(Menu[currentMenu].val_Int);
+        // We don't even draw the X anymore since it is irrelevant
+    }
+}
+
+void DrawEditNightColor(int x, int y, int16_t Val, boolean subEntered)
+{
+uint16_t color;
+
+    tft.setFont(Arial_16_Bold);
+    color = NightColor; // We only do night color
+
+ // AM HERE
+ // FILL IN THE R, G, B numbers with highlighting for whichever one you're on
+ // Do not use a space " " between numbers or they won't space correctly as they go from 99 to 100, etc... space them by some fixed amount. 
+ 
+    if (!subEntered)
+    {
+        // Here we are cycling back and forth over the selections R, G, B, or X
+        switch (Val)
+        {
+            case 0:     // R
+
+                // X is not highlighted
+                tft.setTextColor(color);
+                tft.setCursor(x + 134, y);
+                tft.print("X");
+                break;
+                
+            case 1:     // G
+
+                // X is not highlighted
+                tft.setTextColor(color);
+                tft.setCursor(x + 134, y);
+                tft.print("X");
+                break;
+
+            case 2:     // B
+                
+                // X is not highlighted
+                tft.setTextColor(color);
+                tft.setCursor(x + 134, y);
+                tft.print("X");
+                break;
+
+            case 3:     // X
+                
+                // X is highlighted
+                tft.setTextColor(CurrentBackgroundColor);
+                tft.fillRect(x + 128, y - 7, 25, 31, COLOR_DARK_YELLOW);
+                tft.setCursor(x + 134, y);
+                tft.print("X");            
+                break;
+        }
+                tft.setCursor(x, y);
+                tft.setTextColor(color);
+                tft.print(Night_R);
+                tft.print(" ");
+                tft.print(Night_G);
+                tft.print(" ");
+                tft.print(Night_B);          
+    }
+    else
+    {
+        // Here we are editing either R, G, or B
+        switch (Val)
+        {
+            case 0:     // R
+
+            case 1:     // G
+
+            case 2:     // B
+
+                break;
+        }
+                tft.setCursor(x, y);
+                tft.setTextColor(color);
+                tft.print(Night_R);
+                tft.print(" ");
+                tft.print(Night_G);
+                tft.print(" ");
+                tft.print(Night_B);        
+    }
+}
+
 void SetupMenus()
 {
     for (uint8_t i=0; i<NUM_MENUS; i++)
     {
         Menu[i].enabled = true;     // Enable menu item
         Menu[i].entered = false;    // But we are not presently in it
+        Menu[i].subMenu_entered = false;    // Have we entered sub-menu
         Menu[i].val_YN = false;     // Default to "No"
         Menu[i].val_Int = 0;        // Default value to 0
         Menu[i].complete = false;   // Action not yet complete

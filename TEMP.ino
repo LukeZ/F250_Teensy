@@ -22,7 +22,7 @@ char buf[5];                    // To convert temp to string so we can calculate
             rO = 32;        // How much vertical space for each row
            
             // Color
-            nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;   // Day or night-time on color
+            nightTime ? color = NightColor : color = ILI9341_WHITE;   // Day or night-time on color
             
             // Overwrite prior
             tft.setFont(Arial_20_Bold);
@@ -175,6 +175,21 @@ char buf[5];                    // To convert temp to string so we can calculate
             AuxTemp.lastSensorPresent = AuxTemp.sensorPresent;
 
             break;
+
+
+        case SCREEN_TEMPERATURE:
+            // This screen will show all detailed temperature information
+            
+            x = OX + 65;
+            y = OY + 34;
+            
+            // Doesn't need blacking out first
+            tft.setFont(Arial_16_Bold); 
+            tft.setCursor(x, y - 4);
+            tft.setTextColor(color);
+            tft.print("TEMPERATURE"); 
+            break;
+
 
         default:        // Do nothing
             // Now we've displayed the info, we can clear this element

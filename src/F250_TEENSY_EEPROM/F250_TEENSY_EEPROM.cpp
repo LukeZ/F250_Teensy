@@ -117,10 +117,15 @@ void F250_TEENSY_EEPROM::Initialize_RAMcopy(void)
         ramcopy.SavedAuxTemp.AbsoluteMaxTimeStamp.hour = 12;
         ramcopy.SavedAuxTemp.AbsoluteMaxTimeStamp.minute = 0;
         ramcopy.SavedAuxTemp.AbsoluteMaxTimeStamp.second = 0;
-
     
     // Altitude stuff
-        // Current adjustment, based on an altitude received from the display
+        ramcopy.lastAltitudeAdjust.month = 1;                       // Initialize date to long ago
+        ramcopy.lastAltitudeAdjust.day = 1;
+        ramcopy.lastAltitudeAdjust.year = 17;
+        ramcopy.lastAltitudeAdjust.hour = 12;
+        ramcopy.lastAltitudeAdjust.minute = 0;
+        ramcopy.lastAltitudeAdjust.second = 0;
+        ramcopy.lastAltitudeAdjust.timezone = 3;
         
     // GPS Stuff
     // Recall N and E are positive, S and W are negative
@@ -129,7 +134,9 @@ void F250_TEENSY_EEPROM::Initialize_RAMcopy(void)
         ramcopy.Lat_Home = 37.7060;     // North 
         ramcopy.Lon_Home = -97.4643;    // West
         ramcopy.Alt_Home = 409;         // Altitude in meters - Huntington Park Apartments, Wichita
-       
+
+    // Night-time color
+        ramcopy.NightColor = 0x1514;    // 23, 161, 165    
 }
 
 

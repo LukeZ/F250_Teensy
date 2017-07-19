@@ -1,7 +1,4 @@
 
-//#include "SPI.h"
-//#include "src/Adafruit_GFX/Adafruit_GFX.h"
-//#include "src/Adafruit_ILI9340/Adafruit_ILI9340.h"
 #include "src/ILI9341_t3/ILI9341_t3.h"                              // PJRC's optimized version of Adafruit's ILI9341 library: https://github.com/PaulStoffregen/ILI9341_t3
 #include "src/ILI9341_t3/font_Arial.h"                              // from ILI9341_t3
 #include "src/ILI9341_t3/font_ArialBold.h"                          // from ILI9341_t3
@@ -111,8 +108,12 @@
 
         // My colors
         uint16_t CurrentBackgroundColor         = ILI9341_BLACK;            
-        //#define TEXT_COLOR_NIGHT              0x0F96              // 15, 240, 170
-        #define TEXT_COLOR_NIGHT                0x1514              // 23, 161, 165
+        //#define NightColor                    0x0F96              // 15, 240, 170
+        uint16_t NightColor                     = 0x1514;           // 23, 161, 165
+        uint8_t Night_R                         = 23;
+        uint8_t Night_G                         = 161;
+        uint8_t Night_B                         = 165;
+        
         #define COLOR_DESELECT                  0x3186              // 51,  51,  51
         #define COLOR_DARK_YELLOW               0xF400              // 241, 128, 0
 
@@ -122,13 +123,13 @@
         #define SCREEN_MENU                     0
         #define SCREEN_AUTO                     1
         #define SCREEN_SPEED                    2
-        #define SCREEN_TEMP                     3
+        #define SCREEN_TEMPERATURE              3
         #define SCREEN_ALTITUDE                 4       
         #define SCREEN_MAX_SCREEN               4                   // Number of last in the list
         
         int8_t currentScreen                   = SCREEN_AUTO;       // What screen are we on (SIGNED)
 
-        #define NUM_MENUS                       10
+        #define NUM_MENUS                       11
         
         #define MENU_SET_ALT_TO_GPS             0
         #define MENU_SET_ALT                    1
@@ -139,11 +140,12 @@
         #define MENU_CLEAR_ALLTIME_TEMP_I       6
         #define MENU_CLEAR_ALLTIME_TEMP_E       7
         #define MENU_CLEAR_ALLTIME_TEMP_A       8
-        #define MENU_EXIT_MENU                  9
+        #define MENU_ADJUST_NIGHT_COLOR         9
+        #define MENU_EXIT_MENU                  10
 
         #define MENU_DEFAULT_MENU               MENU_SET_ALT_TO_GPS 
         
-        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Default Screen", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Exit Menu"};
+        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Default Screen", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Adjust Night", "Exit Menu"};
         int8_t currentMenu                      = 0;                // What menu item are we on (SIGNED) 
         boolean inMenu                          = false;            // Have we entered the menu screen
         boolean inSelection                     = false;            // Have we entered a menu item
@@ -151,6 +153,7 @@
         struct _menu_item{
             boolean enabled;
             boolean entered;
+            boolean subMenu_entered;
             boolean val_YN;                     // True if Yes, False if No
             int16_t val_Int;                    // Integer value
             boolean complete;                   // Are we trying to complete the action (aka, hit enter)
@@ -254,11 +257,6 @@
 
         boolean OverdriveEnabled                = false;
         uint8_t BaumannTable                    = 0;                // Should be either 1 or 2
-        
-    
-    // TESTING ! ! TESTING ! ! TESTING 
-    //--------------------------------------------------------------------------------------------------------------------------------------------------->>
-    elapsedMillis testTime;
 
 
 void setup()
@@ -298,6 +296,10 @@ void setup()
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
         boolean did_we_init = eeprom.begin();                       // begin() will initialize EEPROM if it never has been before, and load all EEPROM settings into our ramcopy struct
         if (did_we_init && DEBUG) { Serial.println(F("EEPROM Initalized")); }    
+
+        // Load night color from EEPROM into RAM
+        NightColor = eeprom.ramcopy.NightColor;
+        tft.color565toRGB(NightColor, Night_R, Night_G, Night_B);
             
     // TFT
     // -------------------------------------------------------------------------------------------------------------------------------------------------->

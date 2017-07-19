@@ -12,6 +12,7 @@ uint16_t color;
     {
         case SCREEN_AUTO:
         case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             x = OX + 0;
             y = OY + 28;
             break;
@@ -24,7 +25,7 @@ uint16_t color;
     }  
 
     // Color
-    nightTime ? color = TEXT_COLOR_NIGHT : color = COLOR_DARK_YELLOW;   // Day or night-time on color
+    nightTime ? color = NightColor : color = COLOR_DARK_YELLOW;   // Day or night-time on color
 
     // ON AIR box
     tft.drawRect(x, y, 50, 61, color);

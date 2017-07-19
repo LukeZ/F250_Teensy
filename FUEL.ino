@@ -15,6 +15,7 @@ uint16_t textColor;
     {
         case SCREEN_AUTO:
         case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             xT = OX + 0;       // Text
             yT = OY + 104;
             xP = OX + 20;       // Symbol
@@ -40,7 +41,7 @@ uint16_t textColor;
     tft.print("PUMP");
 
     // Symbol color
-    nightTime ? pumpColor = TEXT_COLOR_NIGHT : pumpColor = COLOR_DARK_YELLOW;   // Day or night-time on color
+    nightTime ? pumpColor = NightColor : pumpColor = COLOR_DARK_YELLOW;   // Day or night-time on color
     if (!FuelPump) pumpColor = COLOR_DESELECT;                                  // Off color
 
     // Pump symbol is a circle with two lines coming out of it

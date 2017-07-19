@@ -15,6 +15,7 @@ static uint32_t lastBlink = millis();
     {
         case SCREEN_AUTO:
         case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             x = OX + 0;
             y = OY + 0;
             break;
@@ -45,7 +46,7 @@ static uint32_t lastBlink = millis();
     }
     else
     {
-        nightTime ? color = TEXT_COLOR_NIGHT : color = ILI9341_WHITE;
+        nightTime ? color = NightColor : color = ILI9341_WHITE;
     }
     
     // Prior voltage - overwrite

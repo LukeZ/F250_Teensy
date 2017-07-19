@@ -19,7 +19,7 @@ int r_outer = 11;
     
     if (GPS_Fix)
     {
-        nightTime ? gps_color = TEXT_COLOR_NIGHT : gps_color = GPS_GREEN;
+        nightTime ? gps_color = NightColor : gps_color = GPS_GREEN;
     }
     else  gps_color = GPS_RED;
     
@@ -27,6 +27,7 @@ int r_outer = 11;
     {
         case SCREEN_AUTO:
         case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             x = OX + 220;
             y = OY + 5;
             break;
@@ -109,7 +110,7 @@ static uint8_t lastHeading;
     }      
 
     // Color
-    nightTime ? textColor = TEXT_COLOR_NIGHT : textColor = COLOR_SPEED_TEXT;
+    nightTime ? textColor = NightColor : textColor = COLOR_SPEED_TEXT;
     
     // Speed
     tft.setFont(Arial_48_Bold);                  

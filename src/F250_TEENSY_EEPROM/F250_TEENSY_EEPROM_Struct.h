@@ -25,12 +25,15 @@ struct _eeprom_data
     _saved_tempdata SavedAuxTemp;
 
 // Altitude stuff
-    // Current adjustment, based on an altitude received from the display
+    _datetime lastAltitudeAdjust;       // When was the last adjustment made. 
 
 // GPS stuff
     float Lat_Home;     // Coordinates of home location
     float Lon_Home;
     int16_t Alt_Home;   // Home altitude, will use to adjust barometric pressure on startup
+
+// Night-time color
+    uint16_t NightColor;
 
 // Marker
     uint32_t InitStamp;                          

@@ -18,6 +18,7 @@ uint16_t final_color;
     {
         case SCREEN_AUTO:
         case SCREEN_ALTITUDE:
+        case SCREEN_TEMPERATURE:
             x = OX + 270;
             y = OY + 11;
             break;
@@ -29,7 +30,7 @@ uint16_t final_color;
             break;  
     }
 
-    nightTime ? bar_color = TEXT_COLOR_NIGHT : bar_color = GSM_BAR;
+    nightTime ? bar_color = NightColor : bar_color = GSM_BAR;
     GSM_Bars > 0 ? final_color = bar_color : final_color = GSM_NOT_BAR; 
         tft.fillRect(x, y, BAR_WIDTH, BAR_WIDTH, final_color); 
     GSM_Bars > 1 ? final_color = bar_color : final_color = GSM_NOT_BAR; 
