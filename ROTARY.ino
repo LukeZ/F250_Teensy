@@ -26,7 +26,7 @@ elapsedMillis waitForResponse;
                             // Here we are selecting some menu item or action
                             if (currentMenu == MENU_EXIT_MENU)
                             {   // Exit menu
-                                currentScreen = SCREEN_AUTO;    // Go back to main screen
+                                currentScreen = SCREEN_MAIN;    // Go back to main screen
                                 knobState = KS_CHANGE_SCREEN;
                                 currentMenu = MENU_DEFAULT_MENU;
                                 inMenu = false;
@@ -177,9 +177,6 @@ elapsedMillis waitForResponse;
                                                 Menu[currentMenu].subMenu_entered = false;              // Let them out
                                             }
                                             break;
-                                            
-                                        case MENU_SET_DEFAULT_SCREEN: 
-                                            break;
                                     }
                                 }
                             }
@@ -190,8 +187,8 @@ elapsedMillis waitForResponse;
                     default:
                         // In all other cases, a single push will enter brighness adjust mode
                         // If we are already in brightness adjust mode, subsequent button presses toggle night/daytime mode
+                        ToggleNighttime();
                         if (!adjustBrightness) StartAdjustBrightness();
-                        else                   ToggleNighttime();
                         break;
                 }
             }
@@ -220,7 +217,7 @@ elapsedMillis waitForResponse;
     kp = knob.read() / 4;
     kp_diff = kp - knobPosition;
     if (RotarySwap) kp_diff = -kp_diff;
-    if (kp != knobPosition) 
+    if (kp != knobPosition && !screenOff)   // Rotary does nothing if screen is off
     {
         switch (knobState)
         {
@@ -291,54 +288,78 @@ elapsedMillis waitForResponse;
                                 switch (Menu[currentMenu].val_Int)
                                 {
                                     case 0:     // R
-                                        tmp = (int16_t)Night_R + kp_diff;
+                                        tmp = (int16_t)Night_R + (kp_diff * 2);
                                         tmp = constrain(tmp, 0, 255);   // keep to 0-255
                                         Night_R = (uint8_t)tmp;
                                         break;
                                     case 1:     // G
-                                        tmp = (int16_t)Night_G + kp_diff;
+                                        tmp = (int16_t)Night_G + (kp_diff * 2);
                                         tmp = constrain(tmp, 0, 255);   // keep to 0-255
                                         Night_G = (uint8_t)tmp;
                                         break;
                                     case 2:     // B
-                                        tmp = (int16_t)Night_B + kp_diff;
+                                        tmp = (int16_t)Night_B + (kp_diff * 2);
                                         tmp = constrain(tmp, 0, 255);   // keep to 0-255
                                         Night_B = (uint8_t)tmp;
                                         break;
                                 }
                              }
-
                             
                              NightColor = tft.color565(Night_R, Night_G, Night_B);
                              break;
-                        
-                        case MENU_SET_DEFAULT_SCREEN: 
-                            break;
                     }                    
                     displayElement.setDataFlag(gde_Menu);
                 }
                 break;
         }
-        knobPosition = kp;
     }
+    knobPosition = kp;
 }
 
 void ToggleNighttime()
 {
-    nightTime = !nightTime;
-    ReStartAdjustBrightness();   // Keep the brightness adjustment mode going since we've pushed a button
-    UpdateAllElements();         // This causes the screens to update
+    screenMode += 1;
+    if (screenMode > 2) screenMode = 0;
 
-    if (DEBUG)
-    {   Serial.print(F("Nighttime mode: "));
-        if (nightTime) Serial.println(F("ON"));
-        else           Serial.println(F("OFF"));
+    switch(screenMode)
+    {
+        case 0:             // Screen off
+            ClearScreen();
+            ShutdownScreen();
+            StopAdjustBrightness();
+            if (currentScreen == SCREEN_MENU)
+                currentScreen = SCREEN_MAIN;    // We shouldn't be, but make sure we are not on the MENU screen, otherwise further button presses won't turn the screen on
+            break;
+        
+        case 1:             // Day-time
+            if (screenOff) StartScreen(); 
+            nightTime = false;
+            break;
+            
+        case 2:             // Night-time
+            if (screenOff) StartScreen(); 
+            nightTime = true;
+            break;        
+    }
+
+    if (!screenOff)
+    {
+        nightTime ? setBacklight(eeprom.ramcopy.DimLevel_Night) : setBacklight(eeprom.ramcopy.DimLevel_Day);
+        ReStartAdjustBrightness();   // Keep the brightness adjustment mode going since we've pushed a button
+        UpdateAllElements();         // This causes the screens to update
+    
+        if (DEBUG)
+        {   Serial.print(F("Nighttime mode: "));
+            if (nightTime) Serial.println(F("ON"));
+            else           Serial.println(F("OFF"));
+        }
     }
 }
 
 void ResetKnob()
 {
     knob.write(0);
+    knobPosition = 0;
 }
 
 void ReStartAdjustBrightness()
@@ -360,19 +381,43 @@ void StopAdjustBrightness()
     adjustBrightness = false;       // Set flag
     knobState = KS_DEFAULT;         // Knob state back to default
     if (TimerID_adjustBrightness > 0) timer.deleteTimer(TimerID_adjustBrightness);
-    if (DEBUG) Serial.println(F("Stop adjust backlight"));
+    // Save new brightness adjustment to EEPROM
+    if (nightTime)
+    {
+        EEPROM.updateByte(offsetof(_eeprom_data, DimLevel_Night), eeprom.ramcopy.DimLevel_Night);
+        if (DEBUG) { Serial.print(F("New night-time brightness level saved: ")); Serial.println(eeprom.ramcopy.DimLevel_Night); }
+    }
+    else
+    {
+        EEPROM.updateByte(offsetof(_eeprom_data, DimLevel_Day), eeprom.ramcopy.DimLevel_Day); // Also to EEPROM        
+        if (DEBUG) { Serial.print(F("New daytime brightness level saved: ")); Serial.println(eeprom.ramcopy.DimLevel_Day); }
+    }
+    
 }
 
 void AdjustBacklight(long kp)
 {
-#define PWM_INCREMENT   16
+uint8_t PWM_INCREMENT = 0;
+
+    nightTime ? BacklightPWM = eeprom.ramcopy.DimLevel_Night : BacklightPWM = eeprom.ramcopy.DimLevel_Day;
+
+    // Brightness is not a linear adjustment, we want finer control the lower we get
+    if      (BacklightPWM < 10)  PWM_INCREMENT =  1;
+    else if (BacklightPWM < 20)  PWM_INCREMENT =  2;
+    else if (BacklightPWM < 40)  PWM_INCREMENT =  4;
+    else if (BacklightPWM < 100) PWM_INCREMENT =  8;
+    else if (BacklightPWM < 200) PWM_INCREMENT = 16;
+    else                         PWM_INCREMENT = 20;
+
     kp = BacklightPWM + (PWM_INCREMENT * kp);
     kp = constrain(kp, 0, 255);    
     BacklightPWM = (uint8_t)kp;
     setBacklight(BacklightPWM);
     ReStartAdjustBrightness();
+    nightTime ? eeprom.ramcopy.DimLevel_Night = BacklightPWM : eeprom.ramcopy.DimLevel_Day = BacklightPWM;
     if (DEBUG) { Serial.print(F("Backlight: ")); Serial.println(kp); }     
 }
+
 
 
 

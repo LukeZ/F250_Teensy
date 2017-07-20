@@ -34,6 +34,10 @@ struct _eeprom_data
 
 // Night-time color
     uint16_t NightColor;
+    
+// Screen settings
+    uint8_t DimLevel_Night;
+    uint8_t DimLevel_Day;
 
 // Marker
     uint32_t InitStamp;                          

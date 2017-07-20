@@ -27,7 +27,7 @@
     // SERIAL   
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         usb_serial_class                        *DebugSerial;       // Which serial port to print debug messages to (HardwareSerial is equal to Serial0/Serial Port 0/USART0)
-        boolean DEBUG                           = false;             // Print debugging messages to the PC
+        boolean DEBUG                           = false;            // Print debugging messages to the PC
         #define MegaSerial                      Serial1             // What serial port are we communicating with the Mega on
 
         #define SENTENCE_BYTES                  5                   // How many bytes in a valid sentence. 
@@ -84,6 +84,13 @@
         int16_t OX                              = 5;                // Offset left
         int16_t OY                              = 15;               // Offset top
 
+        // Screen on/off status
+        boolean screenOff                       = true;             // 
+        #define SCREEN_MODE_OFF                 0
+        #define SCREEN_MODE_DAY                 1
+        #define SCREEN_MODE_NIGHT               2
+        uint8_t screenMode                      = SCREEN_MODE_OFF;
+
     // ROTARY ENCODER / PUSHBUTTON
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
         Encoder knob(ROT_A, ROT_B);
@@ -121,31 +128,30 @@
     // SCREENS
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>    
         #define SCREEN_MENU                     0
-        #define SCREEN_AUTO                     1
+        #define SCREEN_MAIN                     1
         #define SCREEN_SPEED                    2
         #define SCREEN_TEMPERATURE              3
         #define SCREEN_ALTITUDE                 4       
         #define SCREEN_MAX_SCREEN               4                   // Number of last in the list
         
-        int8_t currentScreen                   = SCREEN_AUTO;       // What screen are we on (SIGNED)
+        int8_t currentScreen                   = SCREEN_MAIN;       // What screen are we on (SIGNED)
 
-        #define NUM_MENUS                       11
+        #define NUM_MENUS                       10
         
         #define MENU_SET_ALT_TO_GPS             0
         #define MENU_SET_ALT                    1
         #define MENU_SET_HOME_COORD             2
         #define MENU_SET_HOME_ALT               3
-        #define MENU_SET_DEFAULT_SCREEN         4
-        #define MENU_SET_TIMEZONE               5
-        #define MENU_CLEAR_ALLTIME_TEMP_I       6
-        #define MENU_CLEAR_ALLTIME_TEMP_E       7
-        #define MENU_CLEAR_ALLTIME_TEMP_A       8
-        #define MENU_ADJUST_NIGHT_COLOR         9
-        #define MENU_EXIT_MENU                  10
+        #define MENU_SET_TIMEZONE               4
+        #define MENU_CLEAR_ALLTIME_TEMP_I       5
+        #define MENU_CLEAR_ALLTIME_TEMP_E       6
+        #define MENU_CLEAR_ALLTIME_TEMP_A       7
+        #define MENU_ADJUST_NIGHT_COLOR         8
+        #define MENU_EXIT_MENU                  9
 
         #define MENU_DEFAULT_MENU               MENU_SET_ALT_TO_GPS 
         
-        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Default Screen", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Adjust Night", "Exit Menu"};
+        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Adjust Night", "Exit Menu"};
         int8_t currentMenu                      = 0;                // What menu item are we on (SIGNED) 
         boolean inMenu                          = false;            // Have we entered the menu screen
         boolean inSelection                     = false;            // Have we entered a menu item
@@ -304,7 +310,7 @@ void setup()
     // TFT
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
         tft.begin();
-        FullBrightness();
+        nightTime ? setBacklight(eeprom.ramcopy.DimLevel_Night) : setBacklight(eeprom.ramcopy.DimLevel_Day);
         tft.setRotation(tftRotation);
 
     // Clear inputs
@@ -321,8 +327,14 @@ void setup()
     // Set screen explicitly
     // -------------------------------------------------------------------------------------------------------------------------------------------------->          
         ClearScreen(); 
-        currentScreen = SCREEN_MENU;
+        currentScreen = SCREEN_MAIN;
         UpdateAllElements();
+        ShutdownScreen();        // Start with screen off until we are told to turn it on, or until the user pushes the button to force it on. 
+        
+    // FOR TESTING ! ! ! ! ! ! !        
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->          
+        StartScreen();
+        currentScreen = SCREEN_TEMPERATURE;
 }
 
 
@@ -332,9 +344,12 @@ void loop()
     HandleRotary();                                             // Take care of the rotary encoder/push-button
     timer.run();
 
-    for (int i = 0; i < NUM_ELEMENTS; i++) 
+    if (!screenOff)
     {
-        if (displayElement.hasData(i)) displayElement.renderElement(i);
+        for (int i = 0; i < NUM_ELEMENTS; i++) 
+        {
+            if (displayElement.hasData(i)) displayElement.renderElement(i);
+        }
     }
 }
 

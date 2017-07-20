@@ -16,9 +16,9 @@ uint16_t final_color;
 
     switch (currentScreen)
     {
-        case SCREEN_AUTO:
+        case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
-        case SCREEN_TEMPERATURE:
+        case SCREEN_SPEED:
             x = OX + 270;
             y = OY + 11;
             break;

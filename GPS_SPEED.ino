@@ -25,9 +25,9 @@ int r_outer = 11;
     
     switch (currentScreen)
     {
-        case SCREEN_AUTO:
+        case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
-        case SCREEN_TEMPERATURE:
+        case SCREEN_SPEED:
             x = OX + 220;
             y = OY + 5;
             break;
@@ -95,7 +95,7 @@ static uint8_t lastHeading;
 
     switch (currentScreen)
     {
-        case SCREEN_AUTO:
+        case SCREEN_MAIN:
             xS = OX + 120;      // Speed
             yS = OY + 120;
             xH = OX + 222;      // Heading

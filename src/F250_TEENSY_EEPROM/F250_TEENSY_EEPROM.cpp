@@ -137,6 +137,10 @@ void F250_TEENSY_EEPROM::Initialize_RAMcopy(void)
 
     // Night-time color
         ramcopy.NightColor = 0x1514;    // 23, 161, 165    
+    
+    // Screen settings
+        ramcopy.DimLevel_Night = 255;   // Full brightness
+        ramcopy.DimLevel_Day = 255;     // Full brightness
 }
 
 

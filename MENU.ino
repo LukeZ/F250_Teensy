@@ -84,12 +84,9 @@ int8_t topMenu;
                     case MENU_SET_HOME_ALT: 
                         DrawEditNumber(x + MENU_WIDTH_SELECT_BOX - 20, y + (3 * MENU_ROW_OFFSET), Menu[currentMenu].val_YN, Menu[currentMenu].subMenu_entered);
                         break;
-                        
-                    case MENU_SET_DEFAULT_SCREEN: 
-                        break;
 
                     case MENU_ADJUST_NIGHT_COLOR:
-                        DrawEditNightColor(x + MENU_WIDTH_SELECT_BOX - 50, y + (3 * MENU_ROW_OFFSET), Menu[currentMenu].val_Int, Menu[currentMenu].subMenu_entered);
+                        DrawEditNightColor(x + MENU_WIDTH_SELECT_BOX - 50, y + (3 * MENU_ROW_OFFSET), Menu[currentMenu].val_Int);
                         break;
     
                 }
@@ -244,84 +241,75 @@ uint16_t color;
     }
 }
 
-void DrawEditNightColor(int x, int y, int16_t Val, boolean subEntered)
+void DrawEditNightColor(int x, int y, int16_t Val)
 {
 uint16_t color;
+int xOffset = 45;
 
     tft.setFont(Arial_16_Bold);
     color = NightColor; // We only do night color
-
- // AM HERE
- // FILL IN THE R, G, B numbers with highlighting for whichever one you're on
- // Do not use a space " " between numbers or they won't space correctly as they go from 99 to 100, etc... space them by some fixed amount. 
  
-    if (!subEntered)
+    // Here we are cycling back and forth over the selections R, G, B, or X
+    switch (Val)
     {
-        // Here we are cycling back and forth over the selections R, G, B, or X
-        switch (Val)
-        {
-            case 0:     // R
+        case 0:     // R
+            tft.fillRect(x - 3, y - 7, 41, 31, COLOR_DARK_YELLOW);
+            PrintNightColorNumber(x, y, Night_R, CurrentBackgroundColor);   // R is  highlighted
+            PrintNightColorNumber(x + xOffset, y, Night_G, color);          // G not highlighted
+            PrintNightColorNumber(x + (xOffset * 2), y, Night_B, color);    // B not highlighted
 
-                // X is not highlighted
-                tft.setTextColor(color);
-                tft.setCursor(x + 134, y);
-                tft.print("X");
-                break;
-                
-            case 1:     // G
+            // X is not highlighted
+            tft.setTextColor(color);
+            tft.setCursor(x + 134, y);
+            tft.print("X");
+            break;
+            
+        case 1:     // G
+            tft.fillRect(x + xOffset - 3, y - 7, 41, 31, COLOR_DARK_YELLOW);
+            PrintNightColorNumber(x, y, Night_R, color);                                // R not highlighted
+            PrintNightColorNumber(x + xOffset, y, Night_G, CurrentBackgroundColor);     // G is  highlighted
+            PrintNightColorNumber(x + (xOffset * 2), y, Night_B, color);                // B not highlighted
 
-                // X is not highlighted
-                tft.setTextColor(color);
-                tft.setCursor(x + 134, y);
-                tft.print("X");
-                break;
+            // X is not highlighted
+            tft.setTextColor(color);
+            tft.setCursor(x + 134, y);
+            tft.print("X");
+            break;
 
-            case 2:     // B
-                
-                // X is not highlighted
-                tft.setTextColor(color);
-                tft.setCursor(x + 134, y);
-                tft.print("X");
-                break;
+        case 2:     // B
+            // B highlighted
+            tft.fillRect(x + (xOffset * 2)- 3, y - 7, 41, 31, COLOR_DARK_YELLOW);
+            PrintNightColorNumber(x, y, Night_R, color);                                    // R not highlighted
+            PrintNightColorNumber(x + xOffset, y, Night_G, color);                          // G not highlighted
+            PrintNightColorNumber(x + (xOffset * 2), y, Night_B, CurrentBackgroundColor);   // B is  highlighted
+            
+            // X is not highlighted
+            tft.setTextColor(color);
+            tft.setCursor(x + 134, y);
+            tft.print("X");
+            break;
 
-            case 3:     // X
-                
-                // X is highlighted
-                tft.setTextColor(CurrentBackgroundColor);
-                tft.fillRect(x + 128, y - 7, 25, 31, COLOR_DARK_YELLOW);
-                tft.setCursor(x + 134, y);
-                tft.print("X");            
-                break;
-        }
-                tft.setCursor(x, y);
-                tft.setTextColor(color);
-                tft.print(Night_R);
-                tft.print(" ");
-                tft.print(Night_G);
-                tft.print(" ");
-                tft.print(Night_B);          
+        case 3:     // X
+            PrintNightColorNumber(x, y, Night_R, color);                    // R not highlighted
+            PrintNightColorNumber(x + xOffset, y, Night_G, color);          // G not highlighted
+            PrintNightColorNumber(x + (xOffset * 2), y, Night_B, color);    // B not highlighted
+            
+            // X is highlighted
+            tft.fillRect(x + 128, y - 7, 25, 31, COLOR_DARK_YELLOW);
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.setCursor(x + 134, y);
+            tft.print("X");            
+            break;
     }
-    else
-    {
-        // Here we are editing either R, G, or B
-        switch (Val)
-        {
-            case 0:     // R
+}
 
-            case 1:     // G
-
-            case 2:     // B
-
-                break;
-        }
-                tft.setCursor(x, y);
-                tft.setTextColor(color);
-                tft.print(Night_R);
-                tft.print(" ");
-                tft.print(Night_G);
-                tft.print(" ");
-                tft.print(Night_B);        
-    }
+void PrintNightColorNumber(int x, int y, uint8_t val, uint16_t color)
+{
+    tft.setTextColor(color);
+    tft.setCursor(x, y);
+    if (val < 10) tft.print(" ");
+    if (val < 100) tft.print(" ");
+    tft.print(val);
 }
 
 void SetupMenus()
@@ -350,8 +338,7 @@ void SetupMenus()
     Menu[MENU_SET_ALT].cmdToMega                = RCV_CMD_SET_CURRENT_ALT;
     Menu[MENU_SET_HOME_COORD].cmdToMega         = RCV_CMD_SET_HOME_COORD;
     Menu[MENU_SET_HOME_ALT].cmdToMega           = RCV_CMD_SET_HOME_ALT;
-    Menu[MENU_SET_DEFAULT_SCREEN].cmdToMega     = 0;                            // This is an internal setting
-    Menu[MENU_SET_TIMEZONE ].cmdToMega          = RCV_CMD_SET_TIMEZONE;
+    Menu[MENU_SET_TIMEZONE].cmdToMega          = RCV_CMD_SET_TIMEZONE;
     Menu[MENU_CLEAR_ALLTIME_TEMP_I].cmdToMega   = RCV_CMD_RESET_ABS_TEMP;
         Menu[MENU_CLEAR_ALLTIME_TEMP_I].modifierToMega   = TS_INTERNAL;
     Menu[MENU_CLEAR_ALLTIME_TEMP_E].cmdToMega   = RCV_CMD_RESET_ABS_TEMP;

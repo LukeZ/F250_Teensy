@@ -13,9 +13,9 @@ uint16_t textColor;
 
     switch (currentScreen)
     {
-        case SCREEN_AUTO:
+        case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
-        case SCREEN_TEMPERATURE:
+        case SCREEN_SPEED:
             xT = OX + 0;       // Text
             yT = OY + 104;
             xP = OX + 20;       // Symbol

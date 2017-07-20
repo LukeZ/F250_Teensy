@@ -96,6 +96,14 @@ static boolean lastFix = false;
     
     switch (sentence->Command)
     {
+        case CMD_DISPLAY_TURN_OFF:
+            ShutdownScreen();
+            break;
+            
+        case CMD_DISPLAY_TURN_ON:
+            StartScreen();
+            break;
+            
         case CMD_TEMP_POSITIVE:
         case CMD_TEMP_NEGATIVE:
             temp = (int16_t)sentence->Value;
@@ -319,6 +327,32 @@ static boolean lastFix = false;
                 if (i == TS_AUX)      { ts = &AuxTemp;      }            
                 if      (ts->updateMinDT_Flag) { ts->allTimeMinDT.hour = sentence->Value; ts->allTimeMinDT.minute = sentence->Modifier; ts->updateMinDT_Flag = false; regularDT = false; }  // Also clear updateDT flag
                 else if (ts->updateMaxDT_Flag) { ts->allTimeMaxDT.hour = sentence->Value; ts->allTimeMaxDT.minute = sentence->Modifier; ts->updateMaxDT_Flag = false; regularDT = false; }  // Also clear updateDT flag
+
+                // Whenever we're given an all-time min/max, we save it to our local EEPROM as well. That way we have no problem recalling it later and the Mega doesn't have to keep sending it
+                switch (i)
+                {
+                    case TS_INTERNAL:   
+                        eeprom.ramcopy.SavedInternalTemp.AbsoluteMin = InternalTemp.allTimeMinTemp;
+                        CopyDateTime(InternalTemp.allTimeMinDT, &eeprom.ramcopy.SavedInternalTemp.AbsoluteMinTimeStamp);
+                        eeprom.ramcopy.SavedInternalTemp.AbsoluteMax = InternalTemp.allTimeMaxTemp;
+                        CopyDateTime(InternalTemp.allTimeMaxDT, &eeprom.ramcopy.SavedInternalTemp.AbsoluteMaxTimeStamp);
+                        EEPROM.updateBlock(offsetof(_eeprom_data, SavedInternalTemp), eeprom.ramcopy.SavedInternalTemp); 
+                        break;
+                    case TS_EXTERNAL:   
+                        eeprom.ramcopy.SavedExternalTemp.AbsoluteMin = ExternalTemp.allTimeMinTemp;
+                        CopyDateTime(ExternalTemp.allTimeMinDT, &eeprom.ramcopy.SavedExternalTemp.AbsoluteMinTimeStamp);
+                        eeprom.ramcopy.SavedExternalTemp.AbsoluteMax = ExternalTemp.allTimeMaxTemp;
+                        CopyDateTime(ExternalTemp.allTimeMaxDT, &eeprom.ramcopy.SavedExternalTemp.AbsoluteMaxTimeStamp);
+                        EEPROM.updateBlock(offsetof(_eeprom_data, SavedExternalTemp), eeprom.ramcopy.SavedExternalTemp); 
+                        break;
+                    case TS_AUX:   
+                        eeprom.ramcopy.SavedAuxTemp.AbsoluteMin = AuxTemp.allTimeMinTemp;
+                        CopyDateTime(AuxTemp.allTimeMinDT, &eeprom.ramcopy.SavedAuxTemp.AbsoluteMinTimeStamp);
+                        eeprom.ramcopy.SavedAuxTemp.AbsoluteMax = AuxTemp.allTimeMaxTemp;
+                        CopyDateTime(AuxTemp.allTimeMaxDT, &eeprom.ramcopy.SavedAuxTemp.AbsoluteMaxTimeStamp);
+                        EEPROM.updateBlock(offsetof(_eeprom_data, SavedAuxTemp), eeprom.ramcopy.SavedAuxTemp); 
+                        break;
+                }
             }            
 
             // Ok, this is just the regular time

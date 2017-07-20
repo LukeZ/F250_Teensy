@@ -14,6 +14,7 @@ uint16_t color = ILI9341_WHITE;
 static float lastinHg;
 static int16_t lastGPS_Alt;
 static int16_t lastPresAlt;
+static int16_t lastHomeAlt;
 static int16_t lastMergedAlt;
 static boolean lastUsePressure;
 int16_t Merged_Altitude;
@@ -33,7 +34,8 @@ static uint8_t last_fHour;
 
     switch (currentScreen)
     {
-        case SCREEN_AUTO:
+        case SCREEN_MAIN:
+        case SCREEN_SPEED:
             x = OX + 100;
             y = OY + 0;
 
@@ -95,7 +97,7 @@ static uint8_t last_fHour;
             tftPrintWithComma(lastPresAlt);
             tft.print(" '");
             tft.setCursor(x + xOffset, y + (yOffset * 3));
-            tftPrintWithComma(Home_Altitude);
+            tftPrintWithComma(lastHomeAlt);
             tft.print(" '");
             tft.setCursor(x + xOffset, y + (yOffset * 4));
             tft.print(lastinHg, 2);
@@ -185,6 +187,7 @@ static uint8_t last_fHour;
     lastinHg = inHg;
     lastGPS_Alt = GPS_Altitude; 
     lastPresAlt = Pressure_Altitude;
+    lastHomeAlt = Home_Altitude;
     lastMergedAlt = Merged_Altitude;
     lastUsePressure = UsePressureAltitude;
     CopyDateTime(*dt, &lastDT);

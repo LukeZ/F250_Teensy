@@ -10,10 +10,23 @@ void ClearScreen()
     tft.fillScreen(CurrentBackgroundColor);
 }
 
+void StartScreen()
+{
+    tft.sleep(false);
+    screenOff = false;
+    // Start back on in day-time mode
+    nightTime = false;
+    setBacklight(eeprom.ramcopy.DimLevel_Day);
+    UpdateAllElements();
+}
+
 void ShutdownScreen()
 {
     tft.sleep(true);
     NoBacklight();
+    screenOff = true;
+    screenMode = SCREEN_MODE_OFF;
+    ResetKnob();
 }
 
 void setBacklight(uint8_t PWM)
