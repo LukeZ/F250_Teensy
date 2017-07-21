@@ -81,6 +81,9 @@ elapsedMillis waitForResponse;
                                                     EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
                                                 }
                                             }
+                                            // We don't bother updating our local ram/eeprom copies of all-time min/max values when we ask the Mega to clear them, because after the
+                                            // Mega clears them it sends the cleared values back and they are updated that way. 
+                                            
                                             // Now exit
                                             Menu[currentMenu].entered = false;
                                             inSelection = false;
@@ -320,10 +323,14 @@ void ToggleNighttime()
 {
     screenMode += 1;
     if (screenMode > 2) screenMode = 0;
+    SetScreenMode(screenMode);
+}
 
-    switch(screenMode)
+void SetScreenMode(uint8_t sm)
+{
+    switch(sm)
     {
-        case 0:             // Screen off
+        case SCREEN_MODE_OFF:  
             ClearScreen();
             ShutdownScreen();
             StopAdjustBrightness();
@@ -331,12 +338,12 @@ void ToggleNighttime()
                 currentScreen = SCREEN_MAIN;    // We shouldn't be, but make sure we are not on the MENU screen, otherwise further button presses won't turn the screen on
             break;
         
-        case 1:             // Day-time
+        case SCREEN_MODE_DAY:  
             if (screenOff) StartScreen(); 
             nightTime = false;
             break;
             
-        case 2:             // Night-time
+        case SCREEN_MODE_NIGHT:
             if (screenOff) StartScreen(); 
             nightTime = true;
             break;        

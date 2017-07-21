@@ -102,6 +102,9 @@ static boolean lastFix = false;
             
         case CMD_DISPLAY_TURN_ON:
             StartScreen();
+            // This is actually where we re-initilize session variables. 
+            hasAutoNightBeenSet = false;
+            hasAutoDayBeenSet = false; 
             break;
             
         case CMD_TEMP_POSITIVE:
@@ -121,10 +124,10 @@ static boolean lastFix = false;
             temp = (int16_t)sentence->Value;
             if (sentence->Command == CMD_TEMP_MIN_NEG) temp = -temp;
             switch (sentence->Modifier)
-            {
-                case TS_INTERNAL:   { InternalTemp.sessionMinTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_EXTERNAL:   { ExternalTemp.sessionMinTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_AUX:        { AuxTemp.sessionMinTemp = temp;      displayElement.setDataFlag(gde_Temperature); } break;
+            {   // To avoid excessive flicker, we don't update the screen on these messages, we let regular temp update it, or the routine lost flag
+                case TS_INTERNAL:   { InternalTemp.sessionMinTemp = temp; } break;
+                case TS_EXTERNAL:   { ExternalTemp.sessionMinTemp = temp; } break;
+                case TS_AUX:        { AuxTemp.sessionMinTemp = temp;      } break;
             }
             break;
             
@@ -133,10 +136,10 @@ static boolean lastFix = false;
             temp = (int16_t)sentence->Value;
             if (sentence->Command == CMD_TEMP_MAX_NEG) temp = -temp;
             switch (sentence->Modifier)
-            {
-                case TS_INTERNAL:   { InternalTemp.sessionMaxTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_EXTERNAL:   { ExternalTemp.sessionMaxTemp = temp; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_AUX:        { AuxTemp.sessionMaxTemp = temp;      displayElement.setDataFlag(gde_Temperature); } break;
+            {   // To avoid excessive flicker, we don't update the screen on these messages, we let regular temp update it, or the routine lost flag
+                case TS_INTERNAL:   { InternalTemp.sessionMaxTemp = temp; } break;
+                case TS_EXTERNAL:   { ExternalTemp.sessionMaxTemp = temp; } break;
+                case TS_AUX:        { AuxTemp.sessionMaxTemp = temp;      } break;
             }
             break;
         
@@ -146,9 +149,9 @@ static boolean lastFix = false;
             if (sentence->Command == CMD_TEMP_ALLTIME_MIN_NEG) temp = -temp;
             switch (sentence->Modifier)
             {
-                case TS_INTERNAL:   { InternalTemp.allTimeMinTemp = temp; InternalTemp.updateMinDT_Flag = true; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_EXTERNAL:   { ExternalTemp.allTimeMinTemp = temp; ExternalTemp.updateMinDT_Flag = true; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_AUX:        { AuxTemp.allTimeMinTemp = temp;      AuxTemp.updateMinDT_Flag = true;      displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_INTERNAL:   { InternalTemp.allTimeMinTemp = temp; InternalTemp.updateMinDT_Flag = true; } break;
+                case TS_EXTERNAL:   { ExternalTemp.allTimeMinTemp = temp; ExternalTemp.updateMinDT_Flag = true; } break;
+                case TS_AUX:        { AuxTemp.allTimeMinTemp = temp;      AuxTemp.updateMinDT_Flag = true;      } break;
             }            
             break;
     
@@ -158,16 +161,17 @@ static boolean lastFix = false;
             if (sentence->Command == CMD_TEMP_ALLTIME_MAX_NEG) temp = -temp;
             switch (sentence->Modifier)
             {
-                case TS_INTERNAL:   { InternalTemp.allTimeMaxTemp = temp; InternalTemp.updateMaxDT_Flag = true; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_EXTERNAL:   { ExternalTemp.allTimeMaxTemp = temp; ExternalTemp.updateMaxDT_Flag = true; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_AUX:        { AuxTemp.allTimeMaxTemp = temp;      AuxTemp.updateMaxDT_Flag = true;      displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_INTERNAL:   { InternalTemp.allTimeMaxTemp = temp; InternalTemp.updateMaxDT_Flag = true; } break;
+                case TS_EXTERNAL:   { ExternalTemp.allTimeMaxTemp = temp; ExternalTemp.updateMaxDT_Flag = true; } break;
+                case TS_AUX:        { AuxTemp.allTimeMaxTemp = temp;      AuxTemp.updateMaxDT_Flag = true;      } break;
             }            
             break;
 
         
         case CMD_TEMP_LOST:
             // Command gets sent if a sensor is lost, this lets the display not to rely on the last reading forever. Next time a temp is sent means it has been found again.
-            switch (sentence->Modifier)
+            // Sensor num sent in Value
+            switch (sentence->Value)
             {
                 case TS_INTERNAL:   InternalTemp.sensorPresent = false; break;
                 case TS_EXTERNAL:   ExternalTemp.sensorPresent = false; break;
@@ -325,41 +329,83 @@ static boolean lastFix = false;
                 if (i == TS_INTERNAL) { ts = &InternalTemp; }
                 if (i == TS_EXTERNAL) { ts = &ExternalTemp; }
                 if (i == TS_AUX)      { ts = &AuxTemp;      }            
-                if      (ts->updateMinDT_Flag) { ts->allTimeMinDT.hour = sentence->Value; ts->allTimeMinDT.minute = sentence->Modifier; ts->updateMinDT_Flag = false; regularDT = false; }  // Also clear updateDT flag
-                else if (ts->updateMaxDT_Flag) { ts->allTimeMaxDT.hour = sentence->Value; ts->allTimeMaxDT.minute = sentence->Modifier; ts->updateMaxDT_Flag = false; regularDT = false; }  // Also clear updateDT flag
+                if      (ts->updateMinDT_Flag) { ts->allTimeMinDT.hour = sentence->Value; ts->allTimeMinDT.minute = sentence->Modifier; regularDT = false; }  
+                else if (ts->updateMaxDT_Flag) { ts->allTimeMaxDT.hour = sentence->Value; ts->allTimeMaxDT.minute = sentence->Modifier; regularDT = false; }  
 
                 // Whenever we're given an all-time min/max, we save it to our local EEPROM as well. That way we have no problem recalling it later and the Mega doesn't have to keep sending it
-                switch (i)
+                if (ts->updateMinDT_Flag)
                 {
-                    case TS_INTERNAL:   
-                        eeprom.ramcopy.SavedInternalTemp.AbsoluteMin = InternalTemp.allTimeMinTemp;
-                        CopyDateTime(InternalTemp.allTimeMinDT, &eeprom.ramcopy.SavedInternalTemp.AbsoluteMinTimeStamp);
-                        eeprom.ramcopy.SavedInternalTemp.AbsoluteMax = InternalTemp.allTimeMaxTemp;
-                        CopyDateTime(InternalTemp.allTimeMaxDT, &eeprom.ramcopy.SavedInternalTemp.AbsoluteMaxTimeStamp);
-                        EEPROM.updateBlock(offsetof(_eeprom_data, SavedInternalTemp), eeprom.ramcopy.SavedInternalTemp); 
-                        break;
-                    case TS_EXTERNAL:   
-                        eeprom.ramcopy.SavedExternalTemp.AbsoluteMin = ExternalTemp.allTimeMinTemp;
-                        CopyDateTime(ExternalTemp.allTimeMinDT, &eeprom.ramcopy.SavedExternalTemp.AbsoluteMinTimeStamp);
-                        eeprom.ramcopy.SavedExternalTemp.AbsoluteMax = ExternalTemp.allTimeMaxTemp;
-                        CopyDateTime(ExternalTemp.allTimeMaxDT, &eeprom.ramcopy.SavedExternalTemp.AbsoluteMaxTimeStamp);
-                        EEPROM.updateBlock(offsetof(_eeprom_data, SavedExternalTemp), eeprom.ramcopy.SavedExternalTemp); 
-                        break;
-                    case TS_AUX:   
-                        eeprom.ramcopy.SavedAuxTemp.AbsoluteMin = AuxTemp.allTimeMinTemp;
-                        CopyDateTime(AuxTemp.allTimeMinDT, &eeprom.ramcopy.SavedAuxTemp.AbsoluteMinTimeStamp);
-                        eeprom.ramcopy.SavedAuxTemp.AbsoluteMax = AuxTemp.allTimeMaxTemp;
-                        CopyDateTime(AuxTemp.allTimeMaxDT, &eeprom.ramcopy.SavedAuxTemp.AbsoluteMaxTimeStamp);
-                        EEPROM.updateBlock(offsetof(_eeprom_data, SavedAuxTemp), eeprom.ramcopy.SavedAuxTemp); 
-                        break;
+                    switch (i)
+                    {
+                        case TS_INTERNAL:   
+                            eeprom.ramcopy.SavedInternalTemp.AbsoluteMin = InternalTemp.allTimeMinTemp;
+                            CopyDateTime(InternalTemp.allTimeMinDT, &eeprom.ramcopy.SavedInternalTemp.AbsoluteMinTimeStamp);
+                            EEPROM.updateBlock(offsetof(_eeprom_data, SavedInternalTemp), eeprom.ramcopy.SavedInternalTemp); 
+                            break;
+                        case TS_EXTERNAL:   
+                            eeprom.ramcopy.SavedExternalTemp.AbsoluteMin = ExternalTemp.allTimeMinTemp;
+                            CopyDateTime(ExternalTemp.allTimeMinDT, &eeprom.ramcopy.SavedExternalTemp.AbsoluteMinTimeStamp);
+                            EEPROM.updateBlock(offsetof(_eeprom_data, SavedExternalTemp), eeprom.ramcopy.SavedExternalTemp); 
+                            break;
+                        case TS_AUX:   
+                            eeprom.ramcopy.SavedAuxTemp.AbsoluteMin = AuxTemp.allTimeMinTemp;
+                            CopyDateTime(AuxTemp.allTimeMinDT, &eeprom.ramcopy.SavedAuxTemp.AbsoluteMinTimeStamp);
+                            EEPROM.updateBlock(offsetof(_eeprom_data, SavedAuxTemp), eeprom.ramcopy.SavedAuxTemp); 
+                            break;
+                    }
+                    // Now clear this flags, the update is complete
+                    ts->updateMinDT_Flag = false;
                 }
-            }            
+        
+                if (ts->updateMaxDT_Flag)
+                {
+                    switch (i)
+                    {
+                        case TS_INTERNAL:   
+                            eeprom.ramcopy.SavedInternalTemp.AbsoluteMax = InternalTemp.allTimeMaxTemp;
+                            CopyDateTime(InternalTemp.allTimeMaxDT, &eeprom.ramcopy.SavedInternalTemp.AbsoluteMaxTimeStamp);
+                            EEPROM.updateBlock(offsetof(_eeprom_data, SavedInternalTemp), eeprom.ramcopy.SavedInternalTemp); 
+                            break;
+                        case TS_EXTERNAL:   
+                            eeprom.ramcopy.SavedExternalTemp.AbsoluteMax = ExternalTemp.allTimeMaxTemp;
+                            CopyDateTime(ExternalTemp.allTimeMaxDT, &eeprom.ramcopy.SavedExternalTemp.AbsoluteMaxTimeStamp);
+                            EEPROM.updateBlock(offsetof(_eeprom_data, SavedExternalTemp), eeprom.ramcopy.SavedExternalTemp); 
+                            break;
+                        case TS_AUX:   
+                            eeprom.ramcopy.SavedAuxTemp.AbsoluteMax = AuxTemp.allTimeMaxTemp;
+                            CopyDateTime(AuxTemp.allTimeMaxDT, &eeprom.ramcopy.SavedAuxTemp.AbsoluteMaxTimeStamp);
+                            EEPROM.updateBlock(offsetof(_eeprom_data, SavedAuxTemp), eeprom.ramcopy.SavedAuxTemp); 
+                            break;
+                    }
+                    // Now clear this flag, the update is complete
+                    ts->updateMaxDT_Flag = false;
+                }
+            }    
 
             // Ok, this is just the regular time
             if (regularDT)
             {
                 DT.hour = sentence->Value;
                 DT.minute = sentence->Modifier;
+                // Are we in the middle of the night? Do we want to automatically switch to night-time mode? 
+                // We only do this once per night or car start. That means the user can change the setting manually and they won't constantly get overwritten
+                // See Settings.h for the Hour definitions
+                // Here we must do an "OR" || for hours, because we count up from some night time hour to 24, then back from 0 up to the morning hour. 
+                if (!nightTime && (DT.hour >= START_NIGHT_HOUR || DT.hour < END_NIGHT_HOUR) && hasAutoNightBeenSet == false) 
+                {   
+                    screenMode = SCREEN_MODE_NIGHT;
+                    SetScreenMode(screenMode);
+                    hasAutoNightBeenSet = true; 
+                    if (DEBUG) Serial.println(F("Night has arrived. Screen set to night-time mode."));
+                }
+                // Now do the opposite check for Day. Here we can look "between" hours because they are contiguous
+                if (nightTime && DT.hour >= END_NIGHT_HOUR && DT.hour < START_NIGHT_HOUR && hasAutoDayBeenSet == false) 
+                {   
+                    screenMode = SCREEN_MODE_DAY;
+                    SetScreenMode(screenMode);
+                    hasAutoDayBeenSet = true; 
+                    if (DEBUG) Serial.println(F("Day has dawned. Screen set to day-time mode."));
+                }                
                 displayElement.setDataFlag(gde_DateTime);   // Update
             }
             break;

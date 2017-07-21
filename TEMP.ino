@@ -12,7 +12,6 @@ uint16_t color = ILI9341_WHITE;
 int degreesymbol = 2;           // size of circle used for degree symbol
 char buf[5];                    // To convert temp to string so we can calculate how wide it is. Leave space for max plus terminator (-999) = 5
 
-
     switch (currentScreen)
     {
         case SCREEN_MAIN:
@@ -124,10 +123,9 @@ char buf[5];                    // To convert temp to string so we can calculate
             ExternalTemp.priorSessionMaxTemp = ExternalTemp.sessionMaxTemp;
             ExternalTemp.priorSessionMinTemp = ExternalTemp.sessionMinTemp;            
             ExternalTemp.lastSensorPresent = ExternalTemp.sensorPresent;
-            AuxTemp.priorTemp = AuxTemp.currentTemp;
-            AuxTemp.priorSessionMaxTemp = AuxTemp.sessionMaxTemp;
-            AuxTemp.priorSessionMinTemp = AuxTemp.sessionMinTemp;
-            AuxTemp.lastSensorPresent = AuxTemp.sensorPresent;
+
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_Temperature);
 
             break;
 
@@ -139,8 +137,6 @@ char buf[5];                    // To convert temp to string so we can calculate
             y = OY + 28;
             iO = 65;        // How much space from indicator (Int, Ext, Aux) to temp
             rO = 65;        // How much vertical space for each row            
-            
-
 
             // Write only once -  yellow
             nightTime ? color = NightColor : color = COLOR_DARK_YELLOW;
@@ -263,6 +259,13 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print("- -");
             }
 
+            // Print these only once - absolute min/maxes should not change very often, if they do you can just skip off the screen and come back to clear the gibberish. 
+            printAllTimeMinMax(x + 100, y, &eeprom.ramcopy.SavedInternalTemp);
+            printAllTimeMinMax(x + 100, y + rO, &eeprom.ramcopy.SavedExternalTemp);
+            printAllTimeMinMax(x + 100, y +(rO*2), &eeprom.ramcopy.SavedAuxTemp);
+  
+
+
             // Write current - External
             tft.setFont(Arial_20_Bold);
             ExternalTemp.sensorPresent ? tft.setTextColor(color) : tft.setTextColor(COLOR_DESELECT);            
@@ -305,7 +308,6 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print("- -");
             }              
 
-
             // Save new text to last
             InternalTemp.priorTemp = InternalTemp.currentTemp;
             InternalTemp.priorSessionMaxTemp = InternalTemp.sessionMaxTemp;
@@ -319,6 +321,9 @@ char buf[5];                    // To convert temp to string so we can calculate
             AuxTemp.priorSessionMaxTemp = AuxTemp.sessionMaxTemp;
             AuxTemp.priorSessionMinTemp = AuxTemp.sessionMinTemp;
             AuxTemp.lastSensorPresent = AuxTemp.sensorPresent;
+        
+            // Now we've displayed the info, we can clear this element
+            displayElement.clearDataFlag(gde_Temperature);
                         
             break;
 
@@ -329,10 +334,68 @@ char buf[5];                    // To convert temp to string so we can calculate
             return;
             break;  
     }
-        
-    // Now we've displayed the info, we can clear this element
-    displayElement.clearDataFlag(gde_Temperature);
 }
+
+void printAllTimeMinMax(int x, int y, _saved_tempdata *ts)
+{
+static uint8_t fHour;
+uint16_t color = ILI9341_WHITE;
+int xOver;                
+char buf[5];   
+
+    // Color
+    nightTime ? color = NightColor : color = ILI9341_WHITE;   // Day or night-time on color
+
+    // All-time minimum 
+    y += 28;
+    tft.setFont(Arial_11_Bold);         
+    tft.setTextColor(color);
+    tft.setCursor(x, y);
+    tft.print(ts->AbsoluteMin);
+    sprintf(buf, "%i", ts->AbsoluteMin);
+    xOver = x + 2 + tft.strPixelLen(buf);    
+    tft.drawCircle(xOver, y + 1, 1, color);  
+    tft.setCursor(x+35, y);    // Move over for date
+    tftPrintMonth(ts->AbsoluteMinTimeStamp.month);
+    tft.print(" ");
+    tft.print(ts->AbsoluteMinTimeStamp.day);
+    ts->AbsoluteMinTimeStamp.year < 100 ? tft.print(", 20") : tft.print(", 2");
+    tft.print(ts->AbsoluteMinTimeStamp.year);
+    tft.setCursor(x+130, y);   // Move over for time
+    if (ts->AbsoluteMinTimeStamp.hour < 10) tft.print(" ");
+    fHour = ts->AbsoluteMinTimeStamp.hour;
+    if (ts->AbsoluteMinTimeStamp.hour > 12) fHour = eeprom.ramcopy.SavedInternalTemp.AbsoluteMinTimeStamp.hour - 12; 
+    tft.print(fHour);
+    tft.print(":");
+    if (ts->AbsoluteMinTimeStamp.minute < 10) tft.print("0");
+    tft.print(ts->AbsoluteMinTimeStamp.minute);
+    ts->AbsoluteMinTimeStamp.hour < 12 ? tft.print(" AM") : tft.print(" PM");
+
+    // All-time maximum
+    y += 15;
+    tft.setCursor(x, y);
+    tft.print(ts->AbsoluteMax);
+    sprintf(buf, "%i", ts->AbsoluteMax);
+    xOver = x + 2 + tft.strPixelLen(buf);    
+    tft.drawCircle(xOver, y + 1, 1, color);  
+    tft.setCursor(x+35, y);    // Move over for date
+    tftPrintMonth(ts->AbsoluteMaxTimeStamp.month);
+    tft.print(" ");
+    tft.print(ts->AbsoluteMaxTimeStamp.day);
+    ts->AbsoluteMaxTimeStamp.year < 100 ? tft.print(", 20") : tft.print(", 2");
+    tft.print(ts->AbsoluteMaxTimeStamp.year);
+    tft.setCursor(x+130, y);   // Move over for time
+    if (ts->AbsoluteMaxTimeStamp.hour < 10) tft.print(" ");
+    fHour = ts->AbsoluteMaxTimeStamp.hour;
+    if (ts->AbsoluteMaxTimeStamp.hour > 12) fHour = ts->AbsoluteMaxTimeStamp.hour - 12; 
+    tft.print(fHour);
+    tft.print(":");
+    if (ts->AbsoluteMaxTimeStamp.minute < 10) tft.print("0");
+    tft.print(ts->AbsoluteMaxTimeStamp.minute);
+    ts->AbsoluteMaxTimeStamp.hour < 12 ? tft.print(" AM") : tft.print(" PM");
+    
+}
+
 
 void InitTempStructs(void)
 {

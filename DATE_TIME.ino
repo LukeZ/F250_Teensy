@@ -53,7 +53,7 @@ static uint8_t last_fHour;
         tftPrintMonth(DT.month);
         tft.print(" ");
         tft.print(DT.day);
-        lastDT.year < 100 ? tft.print(", 20") : tft.print(", 2");
+        DT.year < 100 ? tft.print(", 20") : tft.print(", 2");
         tft.print(DT.year);
 
     // Time on the right - Overwrite

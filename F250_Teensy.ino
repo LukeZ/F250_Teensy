@@ -26,7 +26,6 @@
 
     // SERIAL   
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
-        usb_serial_class                        *DebugSerial;       // Which serial port to print debug messages to (HardwareSerial is equal to Serial0/Serial Port 0/USART0)
         boolean DEBUG                           = false;            // Print debugging messages to the PC
         #define MegaSerial                      Serial1             // What serial port are we communicating with the Mega on
 
@@ -112,6 +111,8 @@
 
         // Nighttime text color
         boolean nightTime                       = false;            // Night time means put all text on the screen to green
+        boolean hasAutoNightBeenSet             = false;            // Have we automatically set the night color? Use this flag to only set it once per night/car start, letting the user change it if they want
+        boolean hasAutoDayBeenSet               = false;            // Have we automatically set the day color? Use this flag to only set it once per day/car start, letting the user change it if they want
 
         // My colors
         uint16_t CurrentBackgroundColor         = ILI9341_BLACK;            
@@ -334,7 +335,7 @@ void setup()
     // FOR TESTING ! ! ! ! ! ! !        
     // -------------------------------------------------------------------------------------------------------------------------------------------------->          
         StartScreen();
-        currentScreen = SCREEN_TEMPERATURE;
+//        currentScreen = SCREEN_TEMPERATURE;
 }
 
 
