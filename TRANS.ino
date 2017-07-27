@@ -14,6 +14,7 @@ static uint8_t lastBT;      // Baumann table
         case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
         case SCREEN_SPEED:
+        case SCREEN_COORD:
             x = OX + 250;
             y = OY + 30;
             break;

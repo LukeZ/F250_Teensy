@@ -16,6 +16,7 @@ static uint8_t last_fHour;
     {
         case SCREEN_MAIN:
         case SCREEN_SPEED:
+        case SCREEN_COORD:
             xD = OX + 0;   // across - date
             xT = OX + 230;  // across - time
             y = OY + 200;

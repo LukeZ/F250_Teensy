@@ -5,6 +5,15 @@ void UpdateAllElements()
     displayElement.setAllDataFlags();
 }
 
+void ChangeScreenActions()
+{
+    if (currentScreen != SCREEN_MAIN && currentScreen != SCREEN_SPEED)
+    {   
+        if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
+    }
+    
+}
+
 void ClearScreen()
 {
     tft.fillScreen(CurrentBackgroundColor);
@@ -27,6 +36,11 @@ void ShutdownScreen()
     screenOff = true;
     screenMode = SCREEN_MODE_OFF;
     ResetKnob();
+    // Also stop this timer if active
+    if (currentScreen != SCREEN_MAIN && currentScreen != SCREEN_SPEED)
+    {   
+        if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
+    }    
 }
 
 void setBacklight(uint8_t PWM)
@@ -72,6 +86,12 @@ void tftPrintWithComma(int16_t val) // Will not work right for exactly the value
     {
         tft.print(val);
     }
+}
+
+void tftPrintSpaces(uint8_t numSpaces)
+{
+    for (uint8_t i=0; i<numSpaces; i++)
+        tft.print(" ");
 }
 
 int16_t RoundToNearestTen(int16_t val)

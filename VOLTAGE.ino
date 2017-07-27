@@ -16,6 +16,7 @@ static uint32_t lastBlink = millis();
         case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
         case SCREEN_SPEED:
+        case SCREEN_COORD:
             x = OX + 0;
             y = OY + 0;
             break;

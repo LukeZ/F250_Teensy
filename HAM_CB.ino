@@ -13,6 +13,7 @@ uint16_t color;
         case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
         case SCREEN_SPEED:
+        case SCREEN_COORD:
             x = OX + 0;
             y = OY + 28;
             break;

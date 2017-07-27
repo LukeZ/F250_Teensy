@@ -27,13 +27,14 @@
 #endif
 
 // maximum number of elements
-const static int NUM_ELEMENTS = 12;
+const static int NUM_ELEMENTS = 13;
 
 enum elementNames {
 	gde_Transmission = 0,
 	gde_Temperature,
 	gde_Altitude,
-	gde_GPS,
+	gde_GPS,        // Fix and satellites
+    gde_GPS_Coord,  // Coordinates only
 	gde_Speed,      // Includes heading
 	gde_Radio,
 	gde_FuelPump, 

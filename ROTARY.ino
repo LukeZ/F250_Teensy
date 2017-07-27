@@ -237,6 +237,7 @@ elapsedMillis waitForResponse;
 
                 ClearScreen();              // Clear screen
                 UpdateAllElements();        // Set to new
+                ChangeScreenActions();      // Any actions that need to take place when we change screens (Utils tab)
                 break;
 
             case KS_CHANGE_MENU:

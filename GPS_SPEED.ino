@@ -1,86 +1,7 @@
 
-//=============================================================================================================================================== >> 
-// GPS
-//=============================================================================================================================================== >> 
-
-void RenderGPS()
-{
-static uint8_t lastNumSats = 0;
-int x = 0;
-int y = 0;
-uint16_t gps_color;
-// size of circles
-int r_inner = 7;
-int r_outer = 11;
-
-#define GPS_GREEN           0x0300          // 0, 99, 0
-#define GPS_RED             0x5000          // 84, 0, 0
-
-    
-    if (GPS_Fix)
-    {
-        nightTime ? gps_color = NightColor : gps_color = GPS_GREEN;
-    }
-    else  gps_color = GPS_RED;
-    
-    switch (currentScreen)
-    {
-        case SCREEN_MAIN:
-        case SCREEN_ALTITUDE:
-        case SCREEN_SPEED:
-            x = OX + 220;
-            y = OY + 5;
-            break;
-
-        default:        // Do nothing
-            // Now we've displayed the info, we can clear this element
-            displayElement.clearDataFlag(gde_GPS);        
-            return;
-            break;  
-    }
-    
-    // Draw GPS circles
-    tft.fillCircle(x, y, r_inner, gps_color);
-    tft.drawCircle(x, y, r_outer, gps_color);
-    tft.drawCircle(x, y, r_outer + 1, gps_color);    // We draw two outer circles to give the line double width
-
-    // D-GPS
-    tft.setFont(Arial_10_Bold);                  
-    tft.setCursor(x+17, y-13);                      // Move to the right slightly, and up. Display a "D" for D-GPS
-    GPS_FixQuality == 2 ? tft.setTextColor(gps_color) : tft.setTextColor(COLOR_DESELECT);
-    tft.print("D");
-
-    // Num satellites
-    tft.setFont(Arial_11);                      
-    tft.setCursor(x+18, y+3);                       // Move to the right slightly, and down
-    tft.setTextColor(CurrentBackgroundColor);
-    tft.print(lastNumSats);                         // Overwrite prior value in background
-    tft.setCursor(x+18, y+3);                       // Go back
-    GPS_Fix ? tft.setTextColor(gps_color) : tft.setTextColor(COLOR_DESELECT);
-    tft.print(GPS_NumSatellites);                   // Write current value
-    lastNumSats = GPS_NumSatellites;                // Save value for next time
-
-    
-    // Fix quality supposedly: 
-    //      0 = invalid
-    //      1 = GPS fix (SPS)
-    //      2 = DGPS fix
-    //      3 = PPS fix
-    //      4 = Real Time Kinematic
-    //      5 = Float RTK
-    //      6 = estimated (dead reckoning) (2.3 feature)
-    //      7 = Manual input mode
-    //      8 = Simulation mode    
-    // You will probably not see above 2
-        
-    // Now we've displayed the info, we can clear this element
-    displayElement.clearDataFlag(gde_GPS);
-
-    return;
-}
 
 //=============================================================================================================================================== >> 
-// SPEED 
+// GPS SPEED 
 //=============================================================================================================================================== >> 
 void RenderSpeed()
 {
@@ -90,66 +11,93 @@ int xH = 0;     // Heading location
 int yH = 0;     
 #define COLOR_SPEED_TEXT    ILI9341_WHITE
 uint16_t textColor; 
+static uint8_t displaySpeed = 0;
 static uint8_t lastSpeed;
 static uint8_t lastHeading;
 
     switch (currentScreen)
     {
         case SCREEN_MAIN:
-            xS = OX + 120;      // Speed
-            yS = OY + 120;
+            xS = OX + 122;      // Speed
+            yS = OY + 112;
             xH = OX + 222;      // Heading
             yH = OY + 162;
+
+            // Color
+            nightTime ? textColor = NightColor : textColor = COLOR_SPEED_TEXT;
+
+            if (displaySpeed < Speed) 
+            {
+                displaySpeed += 1;
+                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
+            }
+            else if (displaySpeed > Speed) 
+            {
+                displaySpeed -= 1;
+                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
+            }   
+            else
+            {
+                displaySpeed = Speed;
+                if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Disable the update timer
+            }
+            
+            // Speed
+            tft.setFont(Arial_48_Bold);                  
+            // Overwrite prior
+            tft.setTextColor(CurrentBackgroundColor);    
+            (lastSpeed < 10) ? tft.setCursor(xS + 19, yS): tft.setCursor(xS, yS);
+            tft.print(lastSpeed);
+                // Write current
+                tft.setTextColor(textColor);
+                (displaySpeed < 10) ? tft.setCursor(xS + 19, yS): tft.setCursor(xS, yS);
+                tft.print(displaySpeed);
+                // Save current display to last
+                lastSpeed = displaySpeed;
+            
+            // MPH text - doesn't change, don't need to pre-write background color
+            tft.setFont(Arial_20_Bold);
+            tft.setCursor(xS + 5, yS + 58);
+            tft.print("MPH");
+        
+            // Heading - but only if speed is positive
+            if (Speed > 0)
+            {
+                tft.setFont(Arial_24_Bold);
+                // Overwrite prior
+                tft.setTextColor(CurrentBackgroundColor);
+                tft.setCursor(xH + returnHeadingXOffset(lastHeading), yH);
+                tftPrintHeading(lastHeading);
+                    // Write current
+                    tft.setTextColor(textColor);
+                    tft.setCursor(xH + returnHeadingXOffset(Heading), yH);
+                    tftPrintHeading(Heading);
+                    // Save current to last
+                    lastHeading = Heading;
+            }            
+            break;
+
+        case SCREEN_SPEED:
+            
+            displayElement.clearDataFlag(gde_Speed);        
             break;
 
         default:        // Do nothing
             // Now we've displayed the info, we can clear this element
-            displayElement.clearDataFlag(gde_Speed);        
+            displayElement.clearDataFlag(gde_Speed);
             return;
             break;  
     }      
 
-    // Color
-    nightTime ? textColor = NightColor : textColor = COLOR_SPEED_TEXT;
-    
-    // Speed
-    tft.setFont(Arial_48_Bold);                  
-    // Overwrite prior
-    tft.setTextColor(CurrentBackgroundColor);    
-    tft.setCursor(xS, yS);  
-    if (lastSpeed < 10); tft.print(" ");
-    tft.print(lastSpeed);
-        // Write current
-        tft.setTextColor(textColor);
-        tft.setCursor(xS, yS);  
-        if (Speed < 10); tft.print(" ");        
-        tft.print(Speed);
-        // Save current to last
-        lastSpeed = Speed;
-    
-    // MPH text - doesn't change, don't need to pre-write background color
-    tft.setFont(Arial_20_Bold);
-    tft.setCursor(xS + 8, yS + 58);
-    tft.print("MPH");
 
-    // Heading - but only if speed is positive
-//    if (Speed > 0)
-//    {
-        tft.setFont(Arial_24_Bold);
-        // Overwrite prior
-        tft.setTextColor(CurrentBackgroundColor);
-        tft.setCursor(xH + returnHeadingXOffset(lastHeading), yH);
-        tftPrintHeading(lastHeading);
-            // Write current
-            tft.setTextColor(textColor);
-            tft.setCursor(xH + returnHeadingXOffset(Heading), yH);
-            tftPrintHeading(Heading);
-            // Save current to last
-            lastHeading = Heading;
-//    }
         
     // Now we've displayed the info, we can clear this element
     displayElement.clearDataFlag(gde_Speed);
+}
+
+void ForceSpeedUpdate(void)
+{
+    displayElement.setDataFlag(gde_Speed);
 }
 
 uint8_t returnHeadingXOffset(uint8_t heading)

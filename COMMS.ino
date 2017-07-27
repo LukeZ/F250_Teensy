@@ -180,7 +180,6 @@ static boolean lastFix = false;
             displayElement.setDataFlag(gde_Temperature);
             break;
 
-
         case CMD_GPS_FIX:
             GPS_Fix = (boolean)sentence->Value; 
             if (GPS_Fix)
@@ -200,6 +199,32 @@ static boolean lastFix = false;
             }
             lastFix = GPS_Fix;
             displayElement.setDataFlag(gde_GPS);
+            break;
+
+        case CMD_LATITUDE_A:
+            Current_Latitude.bval[0] = sentence->Value;
+            Current_Latitude.bval[1] = sentence->Modifier;
+            Lat_Updated = false;        // Because we're only halfway through
+            break;
+            
+        case CMD_LATITUDE_B:
+            Current_Latitude.bval[2] = sentence->Value;
+            Current_Latitude.bval[3] = sentence->Modifier;        
+            Lon_Updated = true;         // We now have all of latitude. Wait to update display until we get longitude. 
+            break;
+            
+        case CMD_LONGITUDE_A:
+            Current_Longitude.bval[0] = sentence->Value;
+            Current_Longitude.bval[1] = sentence->Modifier;
+            Lon_Updated = false;
+            break;
+            
+        case CMD_LONGITUDE_B:
+            Current_Longitude.bval[2] = sentence->Value;
+            Current_Longitude.bval[3] = sentence->Modifier;
+            Lon_Updated = true;
+            CopyDateTime(DT, &lastCoordinateTime);
+            displayElement.setDataFlag(gde_GPS_Coord);
             break;
 
         case CMD_GPS_SATELLITES:

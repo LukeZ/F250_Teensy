@@ -16,6 +16,7 @@ uint16_t textColor;
         case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
         case SCREEN_SPEED:
+        case SCREEN_COORD:
             xT = OX + 0;       // Text
             yT = OY + 104;
             xP = OX + 20;       // Symbol

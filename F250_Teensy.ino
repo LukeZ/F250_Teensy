@@ -131,14 +131,13 @@
         #define SCREEN_MENU                     0
         #define SCREEN_MAIN                     1
         #define SCREEN_SPEED                    2
-        #define SCREEN_TEMPERATURE              3
-        #define SCREEN_ALTITUDE                 4       
-        #define SCREEN_MAX_SCREEN               4                   // Number of last in the list
-        
+        #define SCREEN_ALTITUDE                 3       
+        #define SCREEN_TEMPERATURE              4
+        #define SCREEN_COORD                    5
+        #define SCREEN_MAX_SCREEN               5                   // Number of last in the list
         int8_t currentScreen                   = SCREEN_MAIN;       // What screen are we on (SIGNED)
 
         #define NUM_MENUS                       10
-        
         #define MENU_SET_ALT_TO_GPS             0
         #define MENU_SET_ALT                    1
         #define MENU_SET_HOME_COORD             2
@@ -189,6 +188,20 @@
         boolean GPS_Fix                         = false;
         uint8_t GPS_FixQuality                  = 0;
         uint8_t GPS_NumSatellites               = 0;
+
+        // GPS Coordinates
+        union {
+            float fval;
+            byte bval[4];
+        } Current_Latitude;
+        union {
+            float fval;
+            byte bval[4];
+        } Current_Longitude;
+        boolean Lat_Updated                     = false;
+        boolean Lon_Updated                     = false;     
+        _datetime lastCoordinateTime;
+        
 
         // Temperature
         typedef char _TEMP_SENSOR;                                  // Convenient names for our sensors
@@ -253,6 +266,8 @@
         uint8_t Speed                           = 0; 
         uint16_t Angle                          = 0;    // 0-360 degrees
         uint8_t Heading                         = 0;    // N, S, E, W, etc...
+        #define SPEED_REFRESH_FREQ_MS           50      // The minimum length of time we wait to increase speed by 1 mile per hour
+        int TimerID_SpeedUpdate                 = 0;    // Timer ID for the speed update refresher
 
         // Transmission
         typedef char _TQC_STATE;                                     // Torque converted locked status
@@ -284,7 +299,8 @@ void setup()
 
     // GRAPHIC DISPLAY ELEMENTS
     // -------------------------------------------------------------------------------------------------------------------------------------------------->    
-        displayElement.setupElement(gde_GPS, RenderGPS);                    // GPS display
+        displayElement.setupElement(gde_GPS, RenderGPS);                    // GPS - fix and satellites
+        displayElement.setupElement(gde_GPS_Coord, RenderGPSCoords);        // GPS coordinates
         displayElement.setupElement(gde_Temperature, RenderTemperature);    // Temperature display
         displayElement.setupElement(gde_GSM, RenderGSM);                    // GSM cell phone
         displayElement.setupElement(gde_Voltage, RenderVoltage);            // Voltage
@@ -331,6 +347,13 @@ void setup()
         currentScreen = SCREEN_MAIN;
         UpdateAllElements();
         ShutdownScreen();        // Start with screen off until we are told to turn it on, or until the user pushes the button to force it on. 
+
+    // Inits
+    // -------------------------------------------------------------------------------------------------------------------------------------------------->          
+        Current_Latitude.fval = 0;
+        Current_Longitude.fval = 0;
+        TimerID_SpeedUpdate = timer.setInterval(SPEED_REFRESH_FREQ_MS, ForceSpeedUpdate);   // Get the timer ID now
+        timer.disable(TimerID_SpeedUpdate);                                                 // But don't enable yet
         
     // FOR TESTING ! ! ! ! ! ! !        
     // -------------------------------------------------------------------------------------------------------------------------------------------------->          
