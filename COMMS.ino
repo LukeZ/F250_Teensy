@@ -201,27 +201,53 @@ static boolean lastFix = false;
             displayElement.setDataFlag(gde_GPS);
             break;
 
+        case CMD_LATITUDE_DEGREES_A:
+            LatitudeDegrees.bval[0] = sentence->Value;
+            LatitudeDegrees.bval[1] = sentence->Modifier;
+            Lat_Updated = false;        // Because we're only halfway through
+            break;
+            
+        case CMD_LATITUDE_DEGREES_B:
+            LatitudeDegrees.bval[2] = sentence->Value;
+            LatitudeDegrees.bval[3] = sentence->Modifier;        
+            Lon_Updated = true;         // We now have all of latitude. Wait to update display until we get longitude. 
+            break;
+            
+        case CMD_LONGITUDE_DEGREES_A:
+            LongitudeDegrees.bval[0] = sentence->Value;
+            LongitudeDegrees.bval[1] = sentence->Modifier;
+            Lon_Updated = false;
+            break;
+            
+        case CMD_LONGITUDE_DEGREES_B:
+            LongitudeDegrees.bval[2] = sentence->Value;
+            LongitudeDegrees.bval[3] = sentence->Modifier;
+            Lon_Updated = true;
+            CopyDateTime(DT, &lastCoordinateTime);
+            displayElement.setDataFlag(gde_GPS_Coord);
+            break;
+
         case CMD_LATITUDE_A:
-            Current_Latitude.bval[0] = sentence->Value;
-            Current_Latitude.bval[1] = sentence->Modifier;
+            Latitude.bval[0] = sentence->Value;
+            Latitude.bval[1] = sentence->Modifier;
             Lat_Updated = false;        // Because we're only halfway through
             break;
             
         case CMD_LATITUDE_B:
-            Current_Latitude.bval[2] = sentence->Value;
-            Current_Latitude.bval[3] = sentence->Modifier;        
+            Latitude.bval[2] = sentence->Value;
+            Latitude.bval[3] = sentence->Modifier;        
             Lon_Updated = true;         // We now have all of latitude. Wait to update display until we get longitude. 
             break;
             
         case CMD_LONGITUDE_A:
-            Current_Longitude.bval[0] = sentence->Value;
-            Current_Longitude.bval[1] = sentence->Modifier;
+            Longitude.bval[0] = sentence->Value;
+            Longitude.bval[1] = sentence->Modifier;
             Lon_Updated = false;
             break;
             
         case CMD_LONGITUDE_B:
-            Current_Longitude.bval[2] = sentence->Value;
-            Current_Longitude.bval[3] = sentence->Modifier;
+            Longitude.bval[2] = sentence->Value;
+            Longitude.bval[3] = sentence->Modifier;
             Lon_Updated = true;
             CopyDateTime(DT, &lastCoordinateTime);
             displayElement.setDataFlag(gde_GPS_Coord);
@@ -238,6 +264,7 @@ static boolean lastFix = false;
                 Speed = sentence->Value;
                 displayElement.setDataFlag(gde_Speed);
             }
+            break;
 
         case CMD_GPS_ANGLE:
             // If Modifier is 1, add 180 to value
@@ -251,9 +278,9 @@ static boolean lastFix = false;
             break; 
 
         case CMD_GPS_HEADING:
-            if (Heading != sentence->Value)
+            if (Heading != (int8_t)sentence->Value)
             {
-                Heading = sentence->Value;
+                Heading = (int8_t)sentence->Value;
                 displayElement.setDataFlag(gde_Speed);
             }
             break; 

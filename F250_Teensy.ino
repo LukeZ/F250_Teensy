@@ -123,6 +123,7 @@
         uint8_t Night_B                         = 165;
         
         #define COLOR_DESELECT                  0x3186              // 51,  51,  51
+        #define COLOR_DESELECT_MEDIUM           0x632C              // 100, 100, 100
         #define COLOR_DARK_YELLOW               0xF400              // 241, 128, 0
 
 
@@ -190,17 +191,25 @@
         uint8_t GPS_NumSatellites               = 0;
 
         // GPS Coordinates
+        union {                                                     // In degrees
+            float fval;
+            byte bval[4];
+        } LatitudeDegrees;
         union {
             float fval;
             byte bval[4];
-        } Current_Latitude;
+        } LongitudeDegrees;
+        union {                                                     // In LatLon format
+            float fval;
+            byte bval[4];
+        } Latitude;
         union {
             float fval;
             byte bval[4];
-        } Current_Longitude;
+        } Longitude;
         boolean Lat_Updated                     = false;
         boolean Lon_Updated                     = false;     
-        _datetime lastCoordinateTime;
+        _datetime lastCoordinateTime;                               // When did we last receive a coordinate from the GPS
         
 
         // Temperature
@@ -265,7 +274,9 @@
         // Speed/direction
         uint8_t Speed                           = 0; 
         uint16_t Angle                          = 0;    // 0-360 degrees
-        uint8_t Heading                         = 0;    // N, S, E, W, etc...
+        int8_t Heading                          = 0;     // N, S, E, W, etc... keep it signed so we can roll over with negatives
+        #define NUM_HEADINGS                    16
+        char * directions[NUM_HEADINGS] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};  
         #define SPEED_REFRESH_FREQ_MS           50      // The minimum length of time we wait to increase speed by 1 mile per hour
         int TimerID_SpeedUpdate                 = 0;    // Timer ID for the speed update refresher
 
@@ -350,8 +361,10 @@ void setup()
 
     // Inits
     // -------------------------------------------------------------------------------------------------------------------------------------------------->          
-        Current_Latitude.fval = 0;
-        Current_Longitude.fval = 0;
+        LatitudeDegrees.fval = 0;
+        LongitudeDegrees.fval = 0;
+        Latitude.fval = 0;
+        Longitude.fval = 0;
         TimerID_SpeedUpdate = timer.setInterval(SPEED_REFRESH_FREQ_MS, ForceSpeedUpdate);   // Get the timer ID now
         timer.disable(TimerID_SpeedUpdate);                                                 // But don't enable yet
         

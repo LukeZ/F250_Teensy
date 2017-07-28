@@ -10,10 +10,11 @@ int yS = 0;
 int xH = 0;     // Heading location
 int yH = 0;     
 #define COLOR_SPEED_TEXT    ILI9341_WHITE
-uint16_t textColor; 
+uint16_t color; 
 static uint8_t displaySpeed = 0;
 static uint8_t lastSpeed;
-static uint8_t lastHeading;
+static int8_t lastHeading;  
+static uint16_t lastAngle;
 
     switch (currentScreen)
     {
@@ -24,7 +25,7 @@ static uint8_t lastHeading;
             yH = OY + 162;
 
             // Color
-            nightTime ? textColor = NightColor : textColor = COLOR_SPEED_TEXT;
+            nightTime ? color = NightColor : color = COLOR_SPEED_TEXT;
 
             if (displaySpeed < Speed) 
             {
@@ -49,7 +50,7 @@ static uint8_t lastHeading;
             (lastSpeed < 10) ? tft.setCursor(xS + 19, yS): tft.setCursor(xS, yS);
             tft.print(lastSpeed);
                 // Write current
-                tft.setTextColor(textColor);
+                tft.setTextColor(color);
                 (displaySpeed < 10) ? tft.setCursor(xS + 19, yS): tft.setCursor(xS, yS);
                 tft.print(displaySpeed);
                 // Save current display to last
@@ -69,7 +70,7 @@ static uint8_t lastHeading;
                 tft.setCursor(xH + returnHeadingXOffset(lastHeading), yH);
                 tftPrintHeading(lastHeading);
                     // Write current
-                    tft.setTextColor(textColor);
+                    tft.setTextColor(color);
                     tft.setCursor(xH + returnHeadingXOffset(Heading), yH);
                     tftPrintHeading(Heading);
                     // Save current to last
@@ -78,6 +79,50 @@ static uint8_t lastHeading;
             break;
 
         case SCREEN_SPEED:
+            xS = OX + 80;      // Speed
+            yS = OY + 40;
+
+            // Color
+            nightTime ? color = NightColor : color = COLOR_SPEED_TEXT;
+
+            if (displaySpeed < Speed) 
+            {
+                displaySpeed += 1;
+                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
+            }
+            else if (displaySpeed > Speed) 
+            {
+                displaySpeed -= 1;
+                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
+            }   
+            else
+            {
+                displaySpeed = Speed;
+                if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Disable the update timer
+            }
+            
+            // Speed
+            tft.setFont(Arial_96_Bold);                  
+            // Overwrite prior
+            tft.setTextColor(CurrentBackgroundColor);    
+            (lastSpeed < 10) ? tft.setCursor(xS + 19, yS): tft.setCursor(xS, yS);
+            tft.print(lastSpeed);
+                // Write current
+                tft.setTextColor(color);
+                (displaySpeed < 10) ? tft.setCursor(xS + 19, yS): tft.setCursor(xS, yS);
+                tft.print(displaySpeed);
+                // Save current display to last
+                lastSpeed = displaySpeed;
+        
+            
+            // Heading
+            // -----------------------------------------------------------------------------------------------------
+            
+            // What I want to do is print 5 headings, the actual one plus two to either side in smaller font
+            PrintHeadingStrip(lastHeading, lastAngle, true);   // True meaning erase
+            PrintHeadingStrip(Heading, Angle, false);      // False meaning write
+            lastHeading = Heading;
+            lastAngle = Angle;
             
             displayElement.clearDataFlag(gde_Speed);        
             break;
@@ -93,6 +138,66 @@ static uint8_t lastHeading;
         
     // Now we've displayed the info, we can clear this element
     displayElement.clearDataFlag(gde_Speed);
+}
+
+void PrintHeadingStrip(int8_t actualHeading, uint16_t angle, boolean erase)
+{
+int x = 32;             // NO OFFSET FROM OX
+int xOffset = 64;
+int y = OY + 195;
+int adjust = 0;
+int8_t heading;
+uint16_t color;
+// THIS IS WRONG - What you need is to offset tick by 64 pixels for every 22.5 degrees the angle changes. After each 22.5 degree increment from 0 pixel adjust needs
+// to start over at 0 and go back to 64 (xOffset)
+int16_t tickAdjust = (((float)angle/22.5) * ((float)xOffset/100.0));
+Serial.print(angle); Serial.print(" "); Serial.println(tickAdjust);
+
+    heading = actualHeading - 2;    // This our start, and we will print five headings from this. Actual heading will end up in the middle. 
+    if (heading < 0) heading = NUM_HEADINGS + heading;   // rollover
+    // Now we have our first heading
+
+    erase ? color = CurrentBackgroundColor : color = ILI9341_WHITE;
+
+    tft.setTextColor(color);
+    
+    for (uint8_t i=0; i<5; i++)
+    {
+        if (i == 2) 
+        {
+            tft.setFont(Arial_24_Bold);     // Middle heading, actual, larger
+            adjust = tft.strPixelLen(directions[heading]);
+            tft.setCursor(x + (xOffset * i) - (adjust >> 1), y - 8); // scootch up
+            if (!erase) 
+            {
+                nightTime ? color = NightColor : color = ILI9341_WHITE;
+            }
+        }
+        else if (i == 1 || i == 3)
+        {
+            tft.setFont(Arial_16_Bold);
+            adjust = tft.strPixelLen(directions[heading]);
+            tft.setCursor(x + (xOffset * i) - (adjust >> 1), y);
+//            if (!erase && (i == 0 || i == 4))  color = COLOR_DESELECT;
+            if (!erase && (i == 1 || i == 3)) color = COLOR_DESELECT_MEDIUM;
+        }
+        else if (i == 0 || i == 4)
+        {
+            tft.setFont(Arial_14_Bold);
+            adjust = tft.strPixelLen(directions[heading]);
+            tft.setCursor(x + (xOffset * i) - (adjust >> 1), y);
+            if (!erase && (i == 0 || i == 4))  color = COLOR_DESELECT;
+//            else if (!erase && (i == 1 || i == 3)) color = COLOR_DESELECT_MEDIUM;            
+        }
+        tft.setTextColor(color);
+        tft.print(directions[heading]);
+        
+        
+        // Increment
+        if (++heading >= NUM_HEADINGS) heading = 0;  // rollover
+
+        tft.drawFastVLine(x - xOffset + (xOffset * i) - tickAdjust, y+10, 10, color);
+    }
 }
 
 void ForceSpeedUpdate(void)
