@@ -310,12 +310,14 @@ void setup()
 
     // GRAPHIC DISPLAY ELEMENTS
     // -------------------------------------------------------------------------------------------------------------------------------------------------->    
-        displayElement.setupElement(gde_GPS, RenderGPS);                    // GPS - fix and satellites
+        displayElement.setupElement(gde_GPS_Fix, RenderGPS);                // GPS - fix and satellites
         displayElement.setupElement(gde_GPS_Coord, RenderGPSCoords);        // GPS coordinates
+        displayElement.setupElement(gde_Speed, RenderSpeed);                // Speed
+        displayElement.setupElement(gde_Heading, RenderHeading);            // Heading - one of the 16 cardinal points
+        displayElement.setupElement(gde_Angle, RenderAngle);                // Angle - compass bearing (0-360)
         displayElement.setupElement(gde_Temperature, RenderTemperature);    // Temperature display
         displayElement.setupElement(gde_GSM, RenderGSM);                    // GSM cell phone
         displayElement.setupElement(gde_Voltage, RenderVoltage);            // Voltage
-        displayElement.setupElement(gde_Speed, RenderSpeed);                // Speed
         displayElement.setupElement(gde_DateTime, RenderDateTime);          // Date/Time
             DT = getBlankDateTime();                                        // Initialize DT
         displayElement.setupElement(gde_FuelPump, RenderFuelPump);          // Fuel pump

@@ -27,15 +27,17 @@
 #endif
 
 // maximum number of elements
-const static int NUM_ELEMENTS = 13;
+const static int NUM_ELEMENTS = 15;
 
 enum elementNames {
 	gde_Transmission = 0,
 	gde_Temperature,
 	gde_Altitude,
-	gde_GPS,        // Fix and satellites
+	gde_GPS_Fix,    // Fix and satellites
     gde_GPS_Coord,  // Coordinates only
-	gde_Speed,      // Includes heading
+	gde_Speed,      // GPS speed
+    gde_Heading,    // Heading - meaning, one of the 16 cardinal points
+    gde_Angle,      // Angle - used for moving strip (0-360 bearing)
 	gde_Radio,
 	gde_FuelPump, 
 	gde_Air, 

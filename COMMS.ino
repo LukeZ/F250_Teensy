@@ -198,7 +198,7 @@ static boolean lastFix = false;
                 if (lastFix != GPS_Fix && currentScreen == SCREEN_MENU ) displayElement.setDataFlag(gde_Menu);
             }
             lastFix = GPS_Fix;
-            displayElement.setDataFlag(gde_GPS);
+            displayElement.setDataFlag(gde_GPS_Fix);
             break;
 
         case CMD_LATITUDE_DEGREES_A:
@@ -255,7 +255,7 @@ static boolean lastFix = false;
 
         case CMD_GPS_SATELLITES:
             GPS_Fix ? GPS_NumSatellites = sentence->Value : GPS_NumSatellites = 0;
-            displayElement.setDataFlag(gde_GPS);
+            displayElement.setDataFlag(gde_GPS_Fix);
             break;
 
         case CMD_SPEED_MPH:
@@ -273,7 +273,7 @@ static boolean lastFix = false;
             if (Angle != tAngle)
             {
                 Angle = tAngle;
-                displayElement.setDataFlag(gde_Speed);
+                displayElement.setDataFlag(gde_Angle);
             }
             break; 
 
@@ -281,7 +281,7 @@ static boolean lastFix = false;
             if (Heading != (int8_t)sentence->Value)
             {
                 Heading = (int8_t)sentence->Value;
-                displayElement.setDataFlag(gde_Speed);
+                displayElement.setDataFlag(gde_Heading);
             }
             break; 
 

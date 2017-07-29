@@ -35,7 +35,7 @@ int r_outer = 11;
 
         default:        // Do nothing
             // Now we've displayed the info, we can clear this element
-            displayElement.clearDataFlag(gde_GPS);        
+            displayElement.clearDataFlag(gde_GPS_Fix);        
             return;
             break;  
     }
@@ -75,7 +75,7 @@ int r_outer = 11;
     // You will probably not see above 2
         
     // Now we've displayed the info, we can clear this element
-    displayElement.clearDataFlag(gde_GPS);
+    displayElement.clearDataFlag(gde_GPS_Fix);
 
     return;
 }
