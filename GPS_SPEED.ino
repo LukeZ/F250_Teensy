@@ -8,8 +8,10 @@ void RenderSpeed()
 int x = 0;     
 int y = 0;  
 uint16_t color; 
-static uint8_t displaySpeed = 0;
-static uint8_t lastSpeed;
+static int16_t displaySpeed = 0;
+static int16_t speedDiff = 0;
+static int16_t lastSpeed;
+long updateRate = 0;
 
     switch (currentScreen)
     {
@@ -20,20 +22,25 @@ static uint8_t lastSpeed;
             // Color
             nightTime ? color = NightColor : color = ILI9341_WHITE;
 
-            if (displaySpeed < Speed) 
+            speedDiff = abs(Speed - displaySpeed);
+            if (speedDiff > 0)
             {
-                displaySpeed += 1;
-                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
+                if (displaySpeed < Speed)       displaySpeed += 1;
+                else if (displaySpeed > Speed)  displaySpeed -= 1;
+
+                if      (speedDiff > 15)    updateRate = 30;
+                else if (speedDiff > 10)    updateRate = 60;
+                else if (speedDiff > 5)     updateRate = 80;
+                else                        updateRate = 100;
+
+                timer.deleteTimer(TimerID_SpeedUpdate);
+                TimerID_SpeedUpdate = timer.setInterval(updateRate, ForceSpeedUpdate); 
             }
-            else if (displaySpeed > Speed) 
-            {
-                displaySpeed -= 1;
-                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
-            }   
             else
             {
                 displaySpeed = Speed;
-                if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Disable the update timer
+                timer.deleteTimer(TimerID_SpeedUpdate);   // Delete the update timer
+                TimerID_SpeedUpdate = 0;
             }
             
             // Speed
@@ -57,37 +64,42 @@ static uint8_t lastSpeed;
             break;
 
         case SCREEN_SPEED:
-            x = OX + 80;      
+            x = OX + 76;      
             y = OY + 40;
 
             // Color
             nightTime ? color = NightColor : color = ILI9341_WHITE;
 
-            if (displaySpeed < Speed) 
+            speedDiff = abs(Speed - displaySpeed);
+            if (speedDiff > 0)
             {
-                displaySpeed += 1;
-                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
+                if (displaySpeed < Speed)       displaySpeed += 1;
+                else if (displaySpeed > Speed)  displaySpeed -= 1;
+
+                if      (speedDiff > 15)    updateRate = 30;
+                else if (speedDiff > 10)    updateRate = 60;
+                else if (speedDiff > 5)     updateRate = 80;
+                else                        updateRate = 100;
+
+                timer.deleteTimer(TimerID_SpeedUpdate);
+                TimerID_SpeedUpdate = timer.setInterval(updateRate, ForceSpeedUpdate); 
             }
-            else if (displaySpeed > Speed) 
-            {
-                displaySpeed -= 1;
-                if (!timer.isEnabled(TimerID_SpeedUpdate)) timer.enable(TimerID_SpeedUpdate);   // Enable the update timer
-            }   
             else
             {
                 displaySpeed = Speed;
-                if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Disable the update timer
+                timer.deleteTimer(TimerID_SpeedUpdate);   // Delete the update timer
+                TimerID_SpeedUpdate = 0;
             }
             
             // Speed
             tft.setFont(Arial_96_Bold);                  
             // Overwrite prior
             tft.setTextColor(CurrentBackgroundColor);    
-            (lastSpeed < 10) ? tft.setCursor(x + 19, y): tft.setCursor(x, y);
+            (lastSpeed < 10) ? tft.setCursor(x + 40, y): tft.setCursor(x, y);
             tft.print(lastSpeed);
                 // Write current
                 tft.setTextColor(color);
-                (displaySpeed < 10) ? tft.setCursor(x + 19, y): tft.setCursor(x, y);
+                (displaySpeed < 10) ? tft.setCursor(x + 40, y): tft.setCursor(x, y);
                 tft.print(displaySpeed);
                 // Save current display to last
                 lastSpeed = displaySpeed;

@@ -9,9 +9,15 @@ void ChangeScreenActions()
 {
     if (currentScreen != SCREEN_MAIN && currentScreen != SCREEN_SPEED)
     {   
-        if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
+        timer.deleteTimer(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
+        TimerID_SpeedUpdate = 0;
     }
-    
+
+    if (currentScreen != SCREEN_SPEED)
+    {
+        timer.deleteTimer(TimerID_AngleUpdate);   // Stop this timer if we're not showing speed
+        TimerID_AngleUpdate = 0;        
+    }   
 }
 
 void ClearScreen()
@@ -39,7 +45,14 @@ void ShutdownScreen()
     // Also stop this timer if active
     if (currentScreen != SCREEN_MAIN && currentScreen != SCREEN_SPEED)
     {   
-        if (timer.isEnabled(TimerID_SpeedUpdate)) timer.disable(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
+        timer.deleteTimer(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
+        TimerID_SpeedUpdate = 0;
+    }
+
+    if (currentScreen != SCREEN_SPEED)
+    {
+        timer.deleteTimer(TimerID_AngleUpdate);   // Stop this timer if we're not showing speed
+        TimerID_AngleUpdate = 0;        
     }    
 }
 

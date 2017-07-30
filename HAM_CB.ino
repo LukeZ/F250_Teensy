@@ -12,11 +12,15 @@ uint16_t color;
     {
         case SCREEN_MAIN:
         case SCREEN_ALTITUDE:
-        case SCREEN_SPEED:
         case SCREEN_COORD:
             x = OX + 0;
-            y = OY + 28;
+            y = OY + 30;
             break;
+
+        case SCREEN_SPEED:  // scootch up on speed screen only
+            x = OX + 0;
+            y = OY + 26;
+            break;  
 
         default:        // Do nothing
             // Now we've displayed the info, we can clear this element

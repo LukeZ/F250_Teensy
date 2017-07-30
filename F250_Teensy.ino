@@ -123,7 +123,9 @@
         uint8_t Night_B                         = 165;
         
         #define COLOR_DESELECT                  0x3186              // 51,  51,  51
-        #define COLOR_DESELECT_MEDIUM           0x632C              // 100, 100, 100
+        #define COLOR_DESELECT_LOW_MEDIUM       0x632C              // 100, 100, 100
+        #define COLOR_DESELECT_HIGH_MEDIUM      0x94B2              // 150, 150, 150
+        //#define COLOR_DESELECT_HIGH_MEDIUM      0xAD75              // 175, 175, 175
         #define COLOR_DARK_YELLOW               0xF400              // 241, 128, 0
 
 
@@ -273,11 +275,11 @@
 
         // Speed/direction
         uint8_t Speed                           = 0; 
-        uint16_t Angle                          = 0;    // 0-360 degrees
+        uint16_t Angle                          = 0;     // 0-360 degrees
         int8_t Heading                          = 0;     // N, S, E, W, etc... keep it signed so we can roll over with negatives
         #define NUM_HEADINGS                    16
-        char * directions[NUM_HEADINGS] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};  
-        #define SPEED_REFRESH_FREQ_MS           50      // The minimum length of time we wait to increase speed by 1 mile per hour
+        char *directions[NUM_HEADINGS] = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};  
+        int TimerID_AngleUpdate                 = 0;    // Timer ID for the angle strip refresher
         int TimerID_SpeedUpdate                 = 0;    // Timer ID for the speed update refresher
 
         // Transmission
@@ -367,8 +369,6 @@ void setup()
         LongitudeDegrees.fval = 0;
         Latitude.fval = 0;
         Longitude.fval = 0;
-        TimerID_SpeedUpdate = timer.setInterval(SPEED_REFRESH_FREQ_MS, ForceSpeedUpdate);   // Get the timer ID now
-        timer.disable(TimerID_SpeedUpdate);                                                 // But don't enable yet
         
     // FOR TESTING ! ! ! ! ! ! !        
     // -------------------------------------------------------------------------------------------------------------------------------------------------->          

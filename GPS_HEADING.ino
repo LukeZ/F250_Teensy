@@ -95,16 +95,14 @@ uint16_t color;
             tft.setFont(Arial_16_Bold);
             adjust = tft.strPixelLen(directions[heading]);
             tft.setCursor(x + (xOffset * i) - (adjust >> 1), y);
-//            if (!erase && (i == 0 || i == 4))  color = COLOR_DESELECT;
-            if (!erase && (i == 1 || i == 3)) color = COLOR_DESELECT_MEDIUM;
+            if (!erase) { nightTime ? color = COLOR_DESELECT_LOW_MEDIUM : color = COLOR_DESELECT_HIGH_MEDIUM; }
         }
         else if (i == 0 || i == 4)
         {
-            tft.setFont(Arial_14_Bold);
+            tft.setFont(Arial_16_Bold);
             adjust = tft.strPixelLen(directions[heading]);
             tft.setCursor(x + (xOffset * i) - (adjust >> 1), y);
-            if (!erase && (i == 0 || i == 4))  color = COLOR_DESELECT;
-//            else if (!erase && (i == 1 || i == 3)) color = COLOR_DESELECT_MEDIUM;            
+            if (!erase)  color = COLOR_DESELECT_LOW_MEDIUM;
         }
         tft.setTextColor(color);
         tft.print(directions[heading]);
