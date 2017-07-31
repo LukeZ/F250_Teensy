@@ -17,7 +17,23 @@ void ChangeScreenActions()
     {
         timer.deleteTimer(TimerID_AngleUpdate);   // Stop this timer if we're not showing speed
         TimerID_AngleUpdate = 0;        
+
+        SessionMaxSpeed = 0;                      // Also reset max speed each time we move off the screen, so in fact it's even less than "session" max. 
     }   
+
+    if (currentScreen == SCREEN_LOGO)
+    {
+        DrawLogo();
+
+        // We also clear the low voltage timer
+        StopLowVoltageBlinker();
+    }
+}
+
+void DrawLogo(void)
+{
+    // Image is 312 x 140 pixels
+    tft.writeRect(4, 55, 312, 140, (uint16_t*)ford); // Load image, but you won't see it
 }
 
 void ClearScreen()
@@ -25,35 +41,62 @@ void ClearScreen()
     tft.fillScreen(CurrentBackgroundColor);
 }
 
-void StartScreen()
+void SplashScreen()
 {
+    tft.setRotation(tftRotation);
     tft.sleep(false);
     screenOff = false;
-    // Start back on in day-time mode
-    nightTime = false;
-    setBacklight(eeprom.ramcopy.DimLevel_Day);
-    UpdateAllElements();
+    screenSplash = true;                    // Have the main loop run through the splash screen animation 
+    splashDir = true;                       // We want to fade in
 }
 
-void ShutdownScreen()
+void StartScreen()
+{
+    // We come here after the splash is done
+    tft.setRotation(tftRotation);
+    tft.sleep(false);
+    screenOff = false;
+    screenSplash = false;
+    nightTime = false;                      // Start back on in day-time mode
+    setBacklight(eeprom.ramcopy.DimLevel_Day);
+    UpdateAllElements();
+    
+    if (currentScreen == SCREEN_LOGO) DrawLogo();   // Re-draw if this is the screen we're on
+}
+
+void ImmediateScreenShutdown()
 {
     tft.sleep(true);
     NoBacklight();
     screenOff = true;
-    screenMode = SCREEN_MODE_OFF;
+    screenMode = SCREEN_MODE_OFF;      
     ResetKnob();
-    // Also stop this timer if active
-    if (currentScreen != SCREEN_MAIN && currentScreen != SCREEN_SPEED)
-    {   
-        timer.deleteTimer(TimerID_SpeedUpdate);   // Stop this timer if we're not showing speed
-        TimerID_SpeedUpdate = 0;
-    }
+    ShutdownScreenTimers();
+}
 
-    if (currentScreen != SCREEN_SPEED)
-    {
-        timer.deleteTimer(TimerID_AngleUpdate);   // Stop this timer if we're not showing speed
-        TimerID_AngleUpdate = 0;        
-    }    
+void ShutdownScreen()
+{   
+    screenSplash = true;                    // Have the main loop run through the splash screen animation
+    splashDir = false;                      // We want to fade out
+    ResetKnob();
+    ShutdownScreenTimers();
+}
+
+void FinalizeShutdown()
+{
+    tft.sleep(true);
+    NoBacklight();
+    screenOff = true;
+    screenMode = SCREEN_MODE_OFF;    
+}
+
+void ShutdownScreenTimers()
+{    
+    timer.deleteTimer(TimerID_SpeedUpdate);
+    TimerID_SpeedUpdate = 0;
+    
+    timer.deleteTimer(TimerID_AngleUpdate);
+    TimerID_AngleUpdate = 0;
 }
 
 void setBacklight(uint8_t PWM)

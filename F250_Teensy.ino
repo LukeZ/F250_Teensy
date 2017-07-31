@@ -11,6 +11,7 @@
 #include "src/EEPROMex/EEPROMex.h"  
 #include "src/F250_SimpleTimer/F250_SimpleTimer.h"
 #include "src/OP_Button/OP_Button.h"
+#include "src/Pictures/Pictures.c" 
 
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
@@ -80,11 +81,13 @@
             #define tftRotation 3
 
         // Top-left offset
-        int16_t OX                              = 5;                // Offset left
-        int16_t OY                              = 15;               // Offset top
+        int16_t OX                              = 5;                // Offset left      5
+        int16_t OY                              = 15;               // Offset top       15
 
         // Screen on/off status
         boolean screenOff                       = true;             // 
+        boolean screenSplash                    = false;            // Are we in the midst of the splash screen animation
+        boolean splashDir                       = true;             // True means fade-in, false means fade-out
         #define SCREEN_MODE_OFF                 0
         #define SCREEN_MODE_DAY                 1
         #define SCREEN_MODE_NIGHT               2
@@ -137,7 +140,8 @@
         #define SCREEN_ALTITUDE                 3       
         #define SCREEN_TEMPERATURE              4
         #define SCREEN_COORD                    5
-        #define SCREEN_MAX_SCREEN               5                   // Number of last in the list
+        #define SCREEN_LOGO                     6
+        #define SCREEN_MAX_SCREEN               6                   // Number of last in the list
         int8_t currentScreen                   = SCREEN_MAIN;       // What screen are we on (SIGNED)
 
         #define NUM_MENUS                       10
@@ -253,10 +257,12 @@
         // Voltage
         float Voltage                           = 0;
         boolean lowVoltage                      = false;// If true, we will change the font color and start blinking. 
+        uint8_t rawVolt;                                // Not converted, just used for changes
         #define LOW_VOLTAGE                     124     // According to Optima, Red and Blue (regular) should read 12.6-12.8 at rest. Yellow (what I have) should be 13-13.2. 
                                                         // Engine running should be anywhere above 13.3 all the way up to 15
                                                         // https://www.optimabatteries.com/en-us/support/charging/recommended-battery-voltage
                                                         // I set this to 12.4 but instead of doing a float (which has problems with comparison), I set it to the pre-convert value
+        int TimerID_VoltageWarning = 0;                 // Timer ID for voltage flasher
         
         // Date/time
         _datetime DT;
@@ -275,6 +281,7 @@
 
         // Speed/direction
         uint8_t Speed                           = 0; 
+        uint8_t SessionMaxSpeed                 = 0;
         uint16_t Angle                          = 0;     // 0-360 degrees
         int8_t Heading                          = 0;     // N, S, E, W, etc... keep it signed so we can roll over with negatives
         #define NUM_HEADINGS                    16
@@ -343,7 +350,6 @@ void setup()
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
         tft.begin();
         nightTime ? setBacklight(eeprom.ramcopy.DimLevel_Night) : setBacklight(eeprom.ramcopy.DimLevel_Day);
-        tft.setRotation(tftRotation);
 
     // Clear inputs
     // -------------------------------------------------------------------------------------------------------------------------------------------------->    
@@ -373,21 +379,109 @@ void setup()
     // FOR TESTING ! ! ! ! ! ! !        
     // -------------------------------------------------------------------------------------------------------------------------------------------------->          
         StartScreen();
-//        currentScreen = SCREEN_TEMPERATURE;
+
+    // Screen is 320 x 240
+
 }
 
 
 void loop()
 {
+static boolean startSplash = true;
+static boolean stopSplash = false; 
+static elapsedMillis fadeTime = 0; 
+static uint32_t fadeTimeWait; 
+static int16_t bpwm = 0;
+uint8_t mypwm; 
+uint8_t increment; 
+static int8_t lastScreen = currentScreen;
+
+
+    // Loop tasks
+    // --------------------------------------------------------------------------------------------------------------------->> 
     CheckSerial();                                              // Communication from the Mega
     HandleRotary();                                             // Take care of the rotary encoder/push-button
     timer.run();
 
     if (!screenOff)
     {
-        for (int i = 0; i < NUM_ELEMENTS; i++) 
+        if (screenSplash)   // splash screen fade in
         {
-            if (displayElement.hasData(i)) displayElement.renderElement(i);
+            // Initialize
+            if (startSplash)
+            {
+                ClearScreen();                                  // Black background
+                startSplash = false;                            // Done initializing
+                stopSplash = false;                             // We're not to the stopping yet
+                if (splashDir)                                  // Fading in
+                {
+                    bpwm = 0;
+                    fadeTimeWait = 200;                         // start at fade in rate
+                }
+                else                                            // Fading out
+                {
+                    bpwm = 255;
+                    fadeTimeWait = 4000;                        // Show the logo for a while
+                }
+                setBacklight(bpwm);
+                DrawLogo();                                     // Utils tab, you won't see this if the backlight is off
+                lastScreen = currentScreen;                     // Remember the last screen
+                currentScreen = SCREEN_LOGO;                    // Temporarily change to splash
+                fadeTime = 0;                                   // Reset timer
+            }         
+            
+            // Fade
+            if (fadeTime > fadeTimeWait)
+            {
+                // When we're done
+                if (stopSplash == true)
+                {
+                    startSplash = true;
+                    stopSplash = false; 
+                    screenSplash = false;
+                    currentScreen = lastScreen;                 // Return to prior screen
+                    if (splashDir)                              // We are done fading in
+                    {
+                        ClearScreen();                          // Clear screen and resume normal
+                        StartScreen();
+                    }
+                    else                                        // We are done fading out
+                    {
+                        FinalizeShutdown();
+                    }
+                }
+                else
+                {
+                    if (bpwm >= 0 && bpwm <= 255)
+                    {
+                        if      (bpwm < 10)  increment =  1;
+                        else if (bpwm < 20)  increment =  2;
+                        else if (bpwm < 40)  increment =  4;
+                        else if (bpwm < 100) increment =  8;
+                        else if (bpwm < 200) increment = 16;
+                        else                 increment = 20;                
+                        splashDir ? bpwm += increment : bpwm -= increment;  // Fade up or down depending
+                        if      (bpwm < 0)   mypwm = 0;
+                        else if (bpwm > 255) mypwm = 255;
+                        else                 mypwm = (uint8_t)bpwm;
+                        setBacklight(mypwm);
+                        fadeTimeWait = 50;      // Now that we are in the fading portion, go back to the standard fading rate
+                    }
+                    else
+                    {
+                        splashDir ? fadeTimeWait = 4000 : fadeTimeWait = 10;    // Pause and show the logo for a while if we are fading in, otherwise don't wait
+                        stopSplash = true;              // This will cause the next time through the loop to complete the fade                        
+                    }
+                }
+                fadeTime = 0;        
+            }
+        }
+        else
+        {
+            for (int i = 0; i < NUM_ELEMENTS; i++) 
+            {
+                if (displayElement.hasData(i)) displayElement.renderElement(i);
+            }
         }
     }
 }

@@ -50,11 +50,12 @@ long updateRate = 0;
             if (displayAngle < angle)       displayAngle += 1;
             else if (displayAngle > angle)  displayAngle -= 1;
     
-            if      (angleDiff > 180)   updateRate = 2;
-            if      (angleDiff > 45)    updateRate = 60;
-            else if (angleDiff > 10)    updateRate = 100;
-            else if (angleDiff > 5)     updateRate = 120;
-            else                        updateRate = 200;
+            if      (angleDiff > 180) { displayAngle = angle; angleDiff = 0; }
+            else if (angleDiff > 60)    updateRate = 20;
+            else if (angleDiff > 45)    updateRate = 40;
+            else if (angleDiff > 10)    updateRate = 60;
+            else if (angleDiff > 5)     updateRate = 80;
+            else                        updateRate = 100;
     
             timer.deleteTimer(TimerID_AngleUpdate);
             TimerID_AngleUpdate = timer.setInterval(updateRate, ForceAngleUpdate); 

@@ -3,6 +3,8 @@ void HandleRotary()
 {
 elapsedMillis waitForResponse;
 
+    if (screenSplash) return;       // Ignore if we are doing the splash screen
+
     // CHECK THE BUTTON
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
     InputButton.read();
@@ -329,11 +331,15 @@ void ToggleNighttime()
 
 void SetScreenMode(uint8_t sm)
 {
+    // If the user is manually changing the screen mode, clear the auto-set flags, otherwise it will get cancelled ten seconds later when the next time update arrives. 
+    hasAutoNightBeenSet = true;         
+    hasAutoDayBeenSet = true;     
+
     switch(sm)
     {
         case SCREEN_MODE_OFF:  
             ClearScreen();
-            ShutdownScreen();
+            ImmediateScreenShutdown();
             StopAdjustBrightness();
             if (currentScreen == SCREEN_MENU)
                 currentScreen = SCREEN_MAIN;    // We shouldn't be, but make sure we are not on the MENU screen, otherwise further button presses won't turn the screen on

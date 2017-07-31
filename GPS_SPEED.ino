@@ -7,11 +7,15 @@ void RenderSpeed()
 {
 int x = 0;     
 int y = 0;  
+int xM = 0;     // Max speed x,y
+int yM = 0;
 uint16_t color; 
+uint16_t maxcolor;
 static int16_t displaySpeed = 0;
 static int16_t speedDiff = 0;
 static int16_t lastSpeed;
 long updateRate = 0;
+static uint8_t lastMaxSpeed;
 
     switch (currentScreen)
     {
@@ -64,11 +68,14 @@ long updateRate = 0;
             break;
 
         case SCREEN_SPEED:
-            x = OX + 76;      
+            x = OX + 78;      
             y = OY + 40;
+            xM = OX + 266;      // Max speed
+            yM = OY + 160;            
 
             // Color
             nightTime ? color = NightColor : color = ILI9341_WHITE;
+            nightTime ? maxcolor = NightColor : maxcolor = ILI9341_RED;
 
             speedDiff = abs(Speed - displaySpeed);
             if (speedDiff > 0)
@@ -103,6 +110,16 @@ long updateRate = 0;
                 tft.print(displaySpeed);
                 // Save current display to last
                 lastSpeed = displaySpeed;
+
+            // Max speed
+            tft.setFont(Arial_18_Bold);
+            tft.setTextColor(CurrentBackgroundColor);
+            tft.setCursor(xM, yM); 
+            tft.print(lastMaxSpeed);
+                tft.setTextColor(maxcolor);
+                tft.setCursor(xM, yM); 
+                tft.print(SessionMaxSpeed);
+            lastMaxSpeed = SessionMaxSpeed;
            
             displayElement.clearDataFlag(gde_Speed);        
             break;

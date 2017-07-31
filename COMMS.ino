@@ -90,8 +90,6 @@ int16_t temp;
 uint16_t tAngle;
 _tempsensor *ts; 
 boolean regularDT = true; 
-static uint8_t volts;
-static int TimerID_VoltageWarning = 0;
 static boolean lastFix = false; 
     
     switch (sentence->Command)
@@ -101,10 +99,11 @@ static boolean lastFix = false;
             break;
             
         case CMD_DISPLAY_TURN_ON:
-            StartScreen();
+            SplashScreen();
             // This is actually where we re-initilize session variables. 
             hasAutoNightBeenSet = false;
             hasAutoDayBeenSet = false; 
+            SessionMaxSpeed = 0;
             break;
             
         case CMD_TEMP_POSITIVE:
@@ -262,6 +261,7 @@ static boolean lastFix = false;
             if (Speed != sentence->Value)
             { 
                 Speed = sentence->Value;
+                if (Speed > SessionMaxSpeed) SessionMaxSpeed = Speed;       // We could also update this using the passed Modifier but it's just as easy to track it here
                 displayElement.setDataFlag(gde_Speed);
             }
             break;
@@ -463,24 +463,10 @@ static boolean lastFix = false;
             break;
 
         case CMD_VOLTAGE:
-            if (volts != sentence->Value)
+            if (rawVolt != sentence->Value)
             {
                 Voltage = float(sentence->Value) / 10.0;    // Actual voltage
-                volts = sentence->Value;                    // Just used to check for changes                
-                if (!lowVoltage && sentence->Value <= LOW_VOLTAGE)
-                {   // We've just dropped below the low voltage threshold
-                    lowVoltage = true;
-                    TimerID_VoltageWarning = timer.setInterval(400, RenderVoltage);
-                }
-                if (lowVoltage && sentence->Value > LOW_VOLTAGE)
-                {   // We've just risen above the low voltage threshold
-                    lowVoltage = false;
-                    if (TimerID_VoltageWarning > 0) 
-                    {
-                        timer.deleteTimer(TimerID_VoltageWarning);
-                        TimerID_VoltageWarning = 0;
-                    }
-                }
+                rawVolt = sentence->Value;                  // Just used to check for changes
                 displayElement.setDataFlag(gde_Voltage);
             }
             break;
