@@ -38,6 +38,10 @@ struct _eeprom_data
 // Screen settings
     uint8_t DimLevel_Night;
     uint8_t DimLevel_Day;
+    boolean showMaxSpeed;
+
+// Rotary swap
+    boolean RotarySwap;     // Lets us swap the direction of the rotary knob
 
 // Marker
     uint32_t InitStamp;                          

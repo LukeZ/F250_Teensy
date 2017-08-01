@@ -3,144 +3,125 @@ void HandleRotary()
 {
 elapsedMillis waitForResponse;
 
-    if (screenSplash) return;       // Ignore if we are doing the splash screen
+    if (screenSplash) return;       // Ignore button and rotary if we are doing the splash screen
 
     // CHECK THE BUTTON
     // -------------------------------------------------------------------------------------------------------------------------------------------------->
     InputButton.read();
-    switch (ButtonState) 
+    if (currentScreen != SCREEN_BLANK)  // Ignore button press only if we are on the blank screen
     {
-        // This state watches for short and long presses
-        case BUTTON_WAIT:   
-            if (InputButton.wasReleased())
-            {   
-                // A single press (short) of the button
-                switch (currentScreen)
-                {
-                    case SCREEN_MENU:
-                        if (!inMenu)
-                        {   // This "enters" the menu, meaning we can now scroll through the menu items
-                            knobState = KS_CHANGE_MENU;
-                            inMenu = true;
-                        }
-                        else
-                        {
-                            // Here we are selecting some menu item or action
-                            if (currentMenu == MENU_EXIT_MENU)
-                            {   // Exit menu
-                                currentScreen = SCREEN_MAIN;    // Go back to main screen
-                                knobState = KS_CHANGE_SCREEN;
-                                currentMenu = MENU_DEFAULT_MENU;
-                                inMenu = false;
-                                // Clear item settings
-                                for (uint8_t i=0; i<NUM_MENUS; i++)
-                                {
-                                    Menu[i].entered = false;        // But we are not presently in it
-                                    Menu[i].val_YN = false;         // Default to "No"
-                                    Menu[i].val_Int = 0;            // Default value to 0
-                                    Menu[i].complete = false;       // Action not yet complete
-                                }                                        
-                                ClearScreen();
-                                UpdateAllElements();
+        switch (ButtonState) 
+        {
+            // This state watches for short and long presses
+            case BUTTON_WAIT:   
+                if (InputButton.wasReleased())
+                {   
+                    // A single press (short) of the button
+                    switch (currentScreen)
+                    {
+                        case SCREEN_MENU:
+                            if (!inMenu)
+                            {   // This "enters" the menu, meaning we can now scroll through the menu items
+                                knobState = KS_CHANGE_MENU;
+                                inMenu = true;
                             }
-                            else if (Menu[currentMenu].enabled)     // Ignore button presses on menu items that are not enabled
+                            else
                             {
-                                if (!Menu[currentMenu].entered)     // If not entered means this is the first button press, so we are "entering" the menu item 
-                                {
-                                    Menu[currentMenu].entered = true;   // We are inside the menu
-                                    Menu[currentMenu].success = false;  // Clear flag, it will get set on exit
-                                    inSelection = true;
-
-                                    // We initialize these altitude set menus to start with
-                                    if (currentMenu == MENU_SET_ALT)        Menu[MENU_SET_ALT].val_Int = RoundToNearestTen(Pressure_Altitude);  // Init to current pressure altitude
-                                    if (currentMenu == MENU_SET_HOME_ALT)   Menu[MENU_SET_HOME_ALT].val_Int = RoundToNearestTen(GPS_Altitude);  // Would be better to init to current home altitude
-                                    if (currentMenu == MENU_ADJUST_NIGHT_COLOR) nightTime = true;       // Set the scheme to night-time to help us adjust it
+                                // Here we are selecting some menu item or action
+                                if (currentMenu == MENU_EXIT_MENU)
+                                {   // Exit menu
+                                    currentScreen = SCREEN_MAIN;    // Go back to main screen
+                                    knobState = KS_CHANGE_SCREEN;
+                                    currentMenu = MENU_DEFAULT_MENU;
+                                    inMenu = false;
+                                    // Clear item settings
+                                    for (uint8_t i=0; i<NUM_MENUS; i++)
+                                    {
+                                        Menu[i].entered = false;        // But we are not presently in it
+                                        Menu[i].val_YN = false;         // Default to "No"
+                                        Menu[i].val_Int = 0;            // Default value to 0
+                                        Menu[i].complete = false;       // Action not yet complete
+                                    }                                        
+                                    ClearScreen();
+                                    UpdateAllElements();
                                 }
-                                else                                // We had already entered this menu item, so now the button press is doing something
+                                else if (Menu[currentMenu].enabled)     // Ignore button presses on menu items that are not enabled
                                 {
-                                    switch (currentMenu)
-                                    {   // All these are Yes / No actions so we can deal with them the same
-                                        case MENU_SET_ALT_TO_GPS:
-                                        case MENU_SET_HOME_COORD: 
-                                        case MENU_CLEAR_ALLTIME_TEMP_I: 
-                                        case MENU_CLEAR_ALLTIME_TEMP_E: 
-                                        case MENU_CLEAR_ALLTIME_TEMP_A: 
-                                            // We are pushing the button on a selection within this menu
-                                            Menu[currentMenu].complete = Menu[currentMenu].val_YN;      // Is the user trying to complete yes or no
-                                            if (Menu[currentMenu].val_YN)                               // If Yes, proceed
-                                            {
-                                                Menu[currentMenu].success = false;                      // Clear the success flag while we wait for a response
-                                                SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
-                                                waitForResponse = 0;
-                                                while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
-                                                {
-                                                    CheckSerial();                                      // Wait for a response
-                                                }
-                                                
-                                                if (currentMenu == MENU_SET_ALT_TO_GPS && Menu[currentMenu].success) 
-                                                {   // Also if successful, save the time of this barometric adjustment
-                                                    CopyDateTime(DT,&eeprom.ramcopy.lastAltitudeAdjust);  // Save the time of last adjustment if that's what we've just selected
-                                                    EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
-                                                }
-                                            }
-                                            // We don't bother updating our local ram/eeprom copies of all-time min/max values when we ask the Mega to clear them, because after the
-                                            // Mega clears them it sends the cleared values back and they are updated that way. 
-                                            
-                                            // Now exit
-                                            Menu[currentMenu].entered = false;
-                                            inSelection = false;
-                                            break;
+                                    if (!Menu[currentMenu].entered)     // If not entered means this is the first button press, so we are "entering" the menu item 
+                                    {
+                                        Menu[currentMenu].entered = true;   // We are inside the menu
+                                        Menu[currentMenu].success = false;  // Clear flag, it will get set on exit
+                                        inSelection = true;
     
-                                        case MENU_SET_TIMEZONE: 
-                                            // We are pushing a button to select a timezone
-                                            Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
-                                            Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
-                                            SendMega(RCV_CMD_SET_TIMEZONE, DT.timezone);                // Tell the Mega to change timezone to value stored in Int
-                                            waitForResponse = 0;
-                                            while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
-                                            {
-                                                CheckSerial();                                      // Wait for a response
-                                            }
-                                            // Now exit
-                                            Menu[currentMenu].entered = false;
-                                            inSelection = false;
-                                            break; 
+                                        // We initialize these altitude set menus to start with
+                                        if (currentMenu == MENU_SET_ALT)        Menu[MENU_SET_ALT].val_Int = RoundToNearestTen(Pressure_Altitude);  // Init to current pressure altitude
+                                        if (currentMenu == MENU_SET_HOME_ALT)   Menu[MENU_SET_HOME_ALT].val_Int = RoundToNearestTen(GPS_Altitude);  // Would be better to init to current home altitude
+                                        if (currentMenu == MENU_ADJUST_NIGHT_COLOR) nightTime = true;       // Set the scheme to night-time to help us adjust it
+                                        if (currentMenu == MENU_SWAP_ROTARY)    Menu[MENU_SWAP_ROTARY].val_YN = eeprom.ramcopy.RotarySwap;          // Init to current y/n selection
+                                        if (currentMenu == MENU_SHOW_MAX_SPEED) Menu[MENU_SHOW_MAX_SPEED].val_YN = eeprom.ramcopy.showMaxSpeed;     // Init to current y/n selection
+                                    }
+                                    else                                // We had already entered this menu item, so now the button press is doing something
+                                    {
+                                        switch (currentMenu)
+                                        {   // All these are Yes / No actions so we can deal with them the same
+                                            case MENU_SET_ALT_TO_GPS:
+                                            case MENU_SET_HOME_COORD: 
+                                            case MENU_CLEAR_ALLTIME_TEMP_I: 
+                                            case MENU_CLEAR_ALLTIME_TEMP_E: 
+                                            case MENU_CLEAR_ALLTIME_TEMP_A: 
+                                                // We are pushing the button on a selection within this menu
+                                                Menu[currentMenu].complete = Menu[currentMenu].val_YN;      // Is the user trying to complete yes or no
+                                                if (Menu[currentMenu].val_YN)                               // If Yes, proceed
+                                                {
+                                                    Menu[currentMenu].success = false;                      // Clear the success flag while we wait for a response
+                                                    SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
+                                                    waitForResponse = 0;
+                                                    while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
+                                                    {
+                                                        CheckSerial();                                      // Wait for a response
+                                                    }
+                                                    
+                                                    if (currentMenu == MENU_SET_ALT_TO_GPS && Menu[currentMenu].success) 
+                                                    {   // Also if successful, save the time of this barometric adjustment
+                                                        CopyDateTime(DT,&eeprom.ramcopy.lastAltitudeAdjust);  // Save the time of last adjustment if that's what we've just selected
+                                                        EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
+                                                    }
+                                                }
+                                                // We don't bother updating our local ram/eeprom copies of all-time min/max values when we ask the Mega to clear them, because after the
+                                                // Mega clears them it sends the cleared values back and they are updated that way. 
+                                                
+                                                // Now exit
+                                                Menu[currentMenu].entered = false;
+                                                inSelection = false;
+                                                break;
 
-                                        case MENU_SET_HOME_ALT: 
-                                        case MENU_SET_ALT: 
-                                            if (!Menu[currentMenu].subMenu_entered)
-                                            {
-                                                if (Menu[currentMenu].val_YN)                               
-                                                {
-                                                    // They have pushed the button while highlighting the altitude number, so now we let them edit it. There is no exiting now
-                                                    // other than by editing the number
-                                                    Menu[currentMenu].subMenu_entered = true;
-                                                }
-                                                else
-                                                {
-                                                    // They are highlighting the "X" and want to exit without changing anything
-                                                    Menu[currentMenu].complete = false;     // Nothing was completed
-                                                    Menu[currentMenu].success = true;       // This actually doesn't matter here since we did nothing
-                                                    Menu[currentMenu].entered = false;
-                                                    inSelection = false;   
-                                                }
-                                            }
-                                            else
-                                            {
-                                                // They decided to edit the number, and now they pressed the button again to indicate they are finished
-                                                // A button press here means we have finished setting the altitude and we can return to the main menu
-                                                if (currentMenu == MENU_SET_HOME_ALT) Home_Altitude = Menu[currentMenu].val_Int;    // Save the home altitude if that's what we've just adjusted
-                                                if (currentMenu == MENU_SET_ALT) 
-                                                {
-                                                    CopyDateTime(DT,&eeprom.ramcopy.lastAltitudeAdjust);  // Save the time of last adjustment if that's what we've just selected
-                                                    EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
-                                                }
+                                            case MENU_SWAP_ROTARY:
+                                                // This is also a Yes/No menu but we don't need to talk to the Mega
+                                                Menu[currentMenu].complete = true;
+                                                eeprom.ramcopy.RotarySwap = Menu[currentMenu].val_YN;       // Set the swap to Yes or No (true or false)    
+                                                EEPROM.updateByte(offsetof(_eeprom_data, RotarySwap), eeprom.ramcopy.RotarySwap);   // Update EEPROM
+                                                Menu[currentMenu].success = true;
+                                                // Now exit
+                                                Menu[currentMenu].entered = false;
+                                                inSelection = false;
+                                                break;
+        
+                                            case MENU_SHOW_MAX_SPEED:
+                                                // This is also a Yes/No menu but we don't need to talk to the Mega
+                                                Menu[currentMenu].complete = true;
+                                                eeprom.ramcopy.showMaxSpeed = Menu[currentMenu].val_YN;       // Set the swap to Yes or No (true or false)    
+                                                EEPROM.updateByte(offsetof(_eeprom_data, showMaxSpeed), eeprom.ramcopy.showMaxSpeed);   // Update EEPROM
+                                                Menu[currentMenu].success = true;
+                                                // Now exit
+                                                Menu[currentMenu].entered = false;
+                                                inSelection = false;
+                                                break;
+
+                                            case MENU_SET_TIMEZONE: 
+                                                // We are pushing a button to select a timezone
                                                 Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
                                                 Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
-                                                Menu[currentMenu].subMenu_entered = false;                  // Clear the sub-menu flag
-                                                Menu[currentMenu].valueToMega = Menu[currentMenu].val_Int / 100;    // Value -    Number of feet over 100, divided by 100
-                                                Menu[currentMenu].modifierToMega = Menu[currentMenu].val_Int % 100; // Modifier - Number of feet under 100
-                                                SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
+                                                SendMega(RCV_CMD_SET_TIMEZONE, DT.timezone);                // Tell the Mega to change timezone to value stored in Int
                                                 waitForResponse = 0;
                                                 while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
                                                 {
@@ -148,70 +129,116 @@ elapsedMillis waitForResponse;
                                                 }
                                                 // Now exit
                                                 Menu[currentMenu].entered = false;
-                                                inSelection = false;                                            
-                                            }
-                                            break;
-                                        
-                                        case MENU_ADJUST_NIGHT_COLOR:
-                                            if (!Menu[currentMenu].subMenu_entered)
-                                            {
-                                                switch (Menu[currentMenu].val_Int)
+                                                inSelection = false;
+                                                break; 
+    
+                                            case MENU_SET_HOME_ALT: 
+                                            case MENU_SET_ALT: 
+                                                if (!Menu[currentMenu].subMenu_entered)
                                                 {
-                                                    case 0:     // R
-                                                    case 1:     // G
-                                                    case 2:     // B
-                                                        // They have pushed the button while highlighting either R, G, or B, so now we let them edit it. 
+                                                    if (Menu[currentMenu].val_YN)                               
+                                                    {
+                                                        // They have pushed the button while highlighting the altitude number, so now we let them edit it. There is no exiting now
+                                                        // other than by editing the number
                                                         Menu[currentMenu].subMenu_entered = true;
-                                                        break;
-                                                    case 3:     // X - cancel
-                                                        // They are highlighting the "X" and want to exit without our changes
-                                                        NightColor = tft.color565(Night_R, Night_G, Night_B);   // Update night color, although it's probably not necessary to do it here
-                                                        eeprom.ramcopy.NightColor = NightColor;                 // Set to ramcopy
-                                                        EEPROM.updateInt(offsetof(_eeprom_data, NightColor), eeprom.ramcopy.NightColor); // Also to EEPROM
-                                                        Menu[currentMenu].complete = true;      // The color has been changed
-                                                        Menu[currentMenu].success = true;       
+                                                    }
+                                                    else
+                                                    {
+                                                        // They are highlighting the "X" and want to exit without changing anything
+                                                        Menu[currentMenu].complete = false;     // Nothing was completed
+                                                        Menu[currentMenu].success = true;       // This actually doesn't matter here since we did nothing
                                                         Menu[currentMenu].entered = false;
-                                                        inSelection = false;
-                                                        break;
+                                                        inSelection = false;   
+                                                    }
                                                 }
-                                            }
-                                            else
-                                            {
-                                                // They were within a submenu, ie editing R, G, or B, and now they pushed the button and want to get back out
-                                                NightColor = tft.color565(Night_R, Night_G, Night_B);   // Update night color, although it's probably not necessary to do it here
-                                                Menu[currentMenu].subMenu_entered = false;              // Let them out
-                                            }
-                                            break;
+                                                else
+                                                {
+                                                    // They decided to edit the number, and now they pressed the button again to indicate they are finished
+                                                    // A button press here means we have finished setting the altitude and we can return to the main menu
+                                                    if (currentMenu == MENU_SET_HOME_ALT) Home_Altitude = Menu[currentMenu].val_Int;    // Save the home altitude if that's what we've just adjusted
+                                                    if (currentMenu == MENU_SET_ALT) 
+                                                    {
+                                                        CopyDateTime(DT,&eeprom.ramcopy.lastAltitudeAdjust);  // Save the time of last adjustment if that's what we've just selected
+                                                        EEPROM.updateBlock(offsetof(_eeprom_data, lastAltitudeAdjust), eeprom.ramcopy.lastAltitudeAdjust); // Also to EEPROM
+                                                    }
+                                                    Menu[currentMenu].complete = true;                          // Each selection is a positive action here, there is no cancel
+                                                    Menu[currentMenu].success = false;                          // Clear the success flag while we wait for a response
+                                                    Menu[currentMenu].subMenu_entered = false;                  // Clear the sub-menu flag
+                                                    Menu[currentMenu].valueToMega = Menu[currentMenu].val_Int / 100;    // Value -    Number of feet over 100, divided by 100
+                                                    Menu[currentMenu].modifierToMega = Menu[currentMenu].val_Int % 100; // Modifier - Number of feet under 100
+                                                    SendMega(Menu[currentMenu].cmdToMega, Menu[currentMenu].valueToMega, Menu[currentMenu].modifierToMega);   // Tell the Mega to do something
+                                                    waitForResponse = 0;
+                                                    while (!Menu[currentMenu].success && waitForResponse < 300) // Wait briefly for a response (300 mS) - but if it comes at all, will be almost instant
+                                                    {
+                                                        CheckSerial();                                      // Wait for a response
+                                                    }
+                                                    // Now exit
+                                                    Menu[currentMenu].entered = false;
+                                                    inSelection = false;                                            
+                                                }
+                                                break;
+                                            
+                                            case MENU_ADJUST_NIGHT_COLOR:
+                                                if (!Menu[currentMenu].subMenu_entered)
+                                                {
+                                                    switch (Menu[currentMenu].val_Int)
+                                                    {
+                                                        case 0:     // R
+                                                        case 1:     // G
+                                                        case 2:     // B
+                                                            // They have pushed the button while highlighting either R, G, or B, so now we let them edit it. 
+                                                            Menu[currentMenu].subMenu_entered = true;
+                                                            break;
+                                                        case 3:     // X - cancel
+                                                            // They are highlighting the "X" and want to exit without our changes
+                                                            NightColor = tft.color565(Night_R, Night_G, Night_B);   // Update night color, although it's probably not necessary to do it here
+                                                            eeprom.ramcopy.NightColor = NightColor;                 // Set to ramcopy
+                                                            EEPROM.updateInt(offsetof(_eeprom_data, NightColor), eeprom.ramcopy.NightColor); // Also to EEPROM
+                                                            Menu[currentMenu].complete = true;      // The color has been changed
+                                                            Menu[currentMenu].success = true;       
+                                                            Menu[currentMenu].entered = false;
+                                                            inSelection = false;
+                                                            break;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    // They were within a submenu, ie editing R, G, or B, and now they pushed the button and want to get back out
+                                                    NightColor = tft.color565(Night_R, Night_G, Night_B);   // Update night color, although it's probably not necessary to do it here
+                                                    Menu[currentMenu].subMenu_entered = false;              // Let them out
+                                                }
+                                                break;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        displayElement.setDataFlag(gde_Menu);
-                        break;
-
-                    default:
-                        // In all other cases, a single push will enter brighness adjust mode
-                        // If we are already in brightness adjust mode, subsequent button presses toggle night/daytime mode
-                        ToggleNighttime();
-                        if (!adjustBrightness) StartAdjustBrightness();
-                        break;
+                            displayElement.setDataFlag(gde_Menu);
+                            break;
+    
+                        default:
+                            // In all other cases, a single push will enter brighness adjust mode
+                            // If we are already in brightness adjust mode, subsequent button presses toggle night/daytime mode
+                            ToggleNighttime();
+                            if (!adjustBrightness) StartAdjustBrightness();
+                            break;
+                    }
                 }
-            }
-            else if (InputButton.pressedFor(1800)) // Two seconds in real life feels like longer than two seconds, so we do 1.8
-            {
-                // User has held down the input button for two seconds. 
-                // Here we can do something
-                do { delay(10); InputButton.read(); } while (!InputButton.wasReleased()); 
-
-                // All the menus above wait for the button to be released before exiting, so we can go straight from here to BUTTON_WAIT
-                ButtonState = BUTTON_WAIT;
-            }
-            break;
-
-        //This is a transition state where we just wait for the user to release the button before moving back to the WAIT state.
-        case BUTTON_TO_WAIT:
-            if (InputButton.wasReleased()) ButtonState = BUTTON_WAIT;
-            break;
+                else if (InputButton.pressedFor(1800)) // Two seconds in real life feels like longer than two seconds, so we do 1.8
+                {
+                    // User has held down the input button for two seconds. 
+                    // Here we can do something
+                    do { delay(10); InputButton.read(); } while (!InputButton.wasReleased()); 
+    
+                    // All the menus above wait for the button to be released before exiting, so we can go straight from here to BUTTON_WAIT
+                    ButtonState = BUTTON_WAIT;
+                }
+                break;
+    
+            //This is a transition state where we just wait for the user to release the button before moving back to the WAIT state.
+            case BUTTON_TO_WAIT:
+                if (InputButton.wasReleased()) ButtonState = BUTTON_WAIT;
+                break;
+        }
     }
 
     // CHECK THE ROTARY
@@ -221,7 +248,7 @@ elapsedMillis waitForResponse;
     long kp_diff;
     kp = knob.read() / 4;
     kp_diff = kp - knobPosition;
-    if (RotarySwap) kp_diff = -kp_diff;
+    if (eeprom.ramcopy.RotarySwap) kp_diff = -kp_diff;
     if (kp != knobPosition && !screenOff)   // Rotary does nothing if screen is off
     {
         switch (knobState)
@@ -262,6 +289,8 @@ elapsedMillis waitForResponse;
                         case MENU_CLEAR_ALLTIME_TEMP_I: 
                         case MENU_CLEAR_ALLTIME_TEMP_E: 
                         case MENU_CLEAR_ALLTIME_TEMP_A: 
+                        case MENU_SWAP_ROTARY:
+                        case MENU_SHOW_MAX_SPEED:
                             Menu[currentMenu].val_YN = !Menu[currentMenu].val_YN;   // Toggle between yes / no
                             break;
 

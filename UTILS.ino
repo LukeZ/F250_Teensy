@@ -72,6 +72,7 @@ void ImmediateScreenShutdown()
     screenMode = SCREEN_MODE_OFF;      
     ResetKnob();
     ShutdownScreenTimers();
+    if (currentScreen == SCREEN_BLANK) currentScreen = SCREEN_MAIN;    // Don't come back to a blank screen
 }
 
 void ShutdownScreen()
@@ -88,6 +89,7 @@ void FinalizeShutdown()
     NoBacklight();
     screenOff = true;
     screenMode = SCREEN_MODE_OFF;    
+    if (currentScreen == SCREEN_BLANK) currentScreen = SCREEN_MAIN;    // Don't come back to a blank screen
 }
 
 void ShutdownScreenTimers()

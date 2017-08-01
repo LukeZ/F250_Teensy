@@ -100,8 +100,9 @@
         OP_Button InputButton = OP_Button(ROT_C, true, true, 25);   // Initialize a button object. Set pin, internal pullup = true, inverted = true, debounce time = 25 mS
         enum {BUTTON_WAIT, BUTTON_TO_WAIT};
         uint8_t ButtonState                     = BUTTON_WAIT;      // The current button state machine state
-        boolean RotarySwap                      = true;             // Swap the direction of movement
-
+        // boolean RotarySwap                      = true;             // Swap the direction of movement
+        // MOVED TO EEPROM
+        
 
     // MY GRAPHIC DATA ELEMENTS
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>
@@ -135,16 +136,17 @@
     // SCREENS
     //--------------------------------------------------------------------------------------------------------------------------------------------------->>    
         #define SCREEN_MENU                     0
-        #define SCREEN_MAIN                     1
-        #define SCREEN_SPEED                    2
-        #define SCREEN_ALTITUDE                 3       
-        #define SCREEN_TEMPERATURE              4
-        #define SCREEN_COORD                    5
-        #define SCREEN_LOGO                     6
-        #define SCREEN_MAX_SCREEN               6                   // Number of last in the list
+        #define SCREEN_BLANK                    1
+        #define SCREEN_MAIN                     2
+        #define SCREEN_SPEED                    3
+        #define SCREEN_ALTITUDE                 4       
+        #define SCREEN_TEMPERATURE              5
+        #define SCREEN_COORD                    6
+        #define SCREEN_LOGO                     7
+        #define SCREEN_MAX_SCREEN               7                   // Number of last in the list
         int8_t currentScreen                   = SCREEN_MAIN;       // What screen are we on (SIGNED)
 
-        #define NUM_MENUS                       10
+        #define NUM_MENUS                       12
         #define MENU_SET_ALT_TO_GPS             0
         #define MENU_SET_ALT                    1
         #define MENU_SET_HOME_COORD             2
@@ -154,11 +156,13 @@
         #define MENU_CLEAR_ALLTIME_TEMP_E       6
         #define MENU_CLEAR_ALLTIME_TEMP_A       7
         #define MENU_ADJUST_NIGHT_COLOR         8
-        #define MENU_EXIT_MENU                  9
+        #define MENU_SWAP_ROTARY                9
+        #define MENU_SHOW_MAX_SPEED             10
+        #define MENU_EXIT_MENU                  11
 
         #define MENU_DEFAULT_MENU               MENU_SET_ALT_TO_GPS 
         
-        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Adjust Night", "Exit Menu"};
+        const char* menuName[NUM_MENUS] = {"Set Alt to GPS", "Set Alt", "Set Home Coord", "Set Home Alt", "Set Timezone", "Clear Int Temps", "Clear Ext Temps", "Clear Aux Temps", "Adjust Night", "Swap Rotary", "Show Max Speed", "Exit Menu"};
         int8_t currentMenu                      = 0;                // What menu item are we on (SIGNED) 
         boolean inMenu                          = false;            // Have we entered the menu screen
         boolean inSelection                     = false;            // Have we entered a menu item
@@ -421,7 +425,7 @@ static int8_t lastScreen = currentScreen;
                 else                                            // Fading out
                 {
                     bpwm = 255;
-                    fadeTimeWait = 4000;                        // Show the logo for a while
+                    fadeTimeWait = 3000;                        // Show the logo for a while
                 }
                 setBacklight(bpwm);
                 DrawLogo();                                     // Utils tab, you won't see this if the backlight is off

@@ -72,7 +72,9 @@ int8_t topMenu;
                     case MENU_SET_HOME_COORD: 
                     case MENU_CLEAR_ALLTIME_TEMP_I: 
                     case MENU_CLEAR_ALLTIME_TEMP_E: 
-                    case MENU_CLEAR_ALLTIME_TEMP_A:                 
+                    case MENU_CLEAR_ALLTIME_TEMP_A:      
+                    case MENU_SWAP_ROTARY:           
+                    case MENU_SHOW_MAX_SPEED:
                          DrawYesNoMenuItems(x, y, Menu[currentMenu].val_YN);
                         break;
     

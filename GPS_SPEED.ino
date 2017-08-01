@@ -112,15 +112,17 @@ static uint8_t lastMaxSpeed;
                 lastSpeed = displaySpeed;
 
             // Max speed
-            tft.setFont(Arial_18_Bold);
-            tft.setTextColor(CurrentBackgroundColor);
-            tft.setCursor(xM, yM); 
-            tft.print(lastMaxSpeed);
-                tft.setTextColor(maxcolor);
+            if (eeprom.ramcopy.showMaxSpeed)   // Show max speed but only if user has selected it from menu
+            {
+                tft.setFont(Arial_18_Bold);
+                tft.setTextColor(CurrentBackgroundColor);
                 tft.setCursor(xM, yM); 
-                tft.print(SessionMaxSpeed);
-            lastMaxSpeed = SessionMaxSpeed;
-           
+                tft.print(lastMaxSpeed);
+                    tft.setTextColor(maxcolor);
+                    tft.setCursor(xM, yM); 
+                    tft.print(SessionMaxSpeed);
+                lastMaxSpeed = SessionMaxSpeed;
+            }
             displayElement.clearDataFlag(gde_Speed);        
             break;
 

@@ -141,6 +141,11 @@ void F250_TEENSY_EEPROM::Initialize_RAMcopy(void)
     // Screen settings
         ramcopy.DimLevel_Night = 255;   // Full brightness
         ramcopy.DimLevel_Day = 255;     // Full brightness
+        ramcopy.showMaxSpeed = true;    // If true, Max speed will be shown on Speed screen. If False, temp will be shown instead
+
+    // Rotary swap
+        ramcopy.RotarySwap = true;      // Lets us swap the direction of the rotary knob. Default to Yes (reversed)
+
 }
 
 
