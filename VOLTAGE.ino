@@ -50,12 +50,12 @@ static uint32_t lastBlink = millis();
             // Prior voltage - overwrite
             tft.setCursor(x, y);
             tft.setTextColor(CurrentBackgroundColor);
-            tft.print(lastVoltage,2);
+            tft.print(lastVoltage,1);
             tft.print(" v");
                 // Current voltage
                 tft.setCursor(x, y);
                 tft.setTextColor(color);
-                tft.print(Voltage,2);
+                tft.print(Voltage,1);
                 tft.print(" v");        
         
             // Save current to last
