@@ -150,8 +150,8 @@ char buf[5];                    // To convert temp to string so we can calculate
             tft.setCursor(OX, y - 28);
             tft.print("TEMPERATURES"); 
 
-            tft.fillRect(OX, y-6, 320, 2, color);           // Line above Int
-            tft.fillRect(OX, y+rO-6, 320, 2, color);        // Line above Ext
+            tft.fillRect(OX, y-6, 320, 2, color);           // Line above Ext
+            tft.fillRect(OX, y+rO-6, 320, 2, color);        // Line above Int
             tft.fillRect(OX, y+(rO*2)-6, 320, 2, color);    // Line above Aux
 
             // Write only once  - Regular color
@@ -168,19 +168,19 @@ char buf[5];                    // To convert temp to string so we can calculate
 
             tft.setFont(Arial_11_Bold);         // All-time minimum and maximums
             tft.setCursor(x, y + 28);
-            tft.print("All-time Min");
-            tft.setCursor(x, y + 43);
             tft.print("All-time Max");
+            tft.setCursor(x, y + 43);
+            tft.print("All-time Min");
 
             tft.setCursor(x, y + rO + 28);
-            tft.print("All-time Min");
-            tft.setCursor(x, y + rO + 43);
             tft.print("All-time Max");
+            tft.setCursor(x, y + rO + 43);
+            tft.print("All-time Min");
 
             tft.setCursor(x, y +(rO*2) + 28);
-            tft.print("All-time Min");
-            tft.setCursor(x, y +(rO*2) + 43);
             tft.print("All-time Max");
+            tft.setCursor(x, y +(rO*2) + 43);
+            tft.print("All-time Min");
 
             // Overwrite prior External
             tft.setTextColor(CurrentBackgroundColor);
@@ -305,8 +305,8 @@ char buf[5];                    // To convert temp to string so we can calculate
             } 
 
             // Print these only once - absolute min/maxes should not change very often, if they do you can just skip off the screen and come back to clear the gibberish. 
-            printAllTimeMinMax(x + 100, y, &eeprom.ramcopy.SavedInternalTemp);
-            printAllTimeMinMax(x + 100, y + rO, &eeprom.ramcopy.SavedExternalTemp);
+            printAllTimeMinMax(x + 100, y, &eeprom.ramcopy.SavedExternalTemp);
+            printAllTimeMinMax(x + 100, y + rO, &eeprom.ramcopy.SavedInternalTemp);
             printAllTimeMinMax(x + 100, y +(rO*2), &eeprom.ramcopy.SavedAuxTemp);             
 
             // Save new text to last
@@ -433,10 +433,33 @@ char buf[5];
     // Color
     nightTime ? color = NightColor : color = ILI9341_WHITE;   // Day or night-time on color
 
-    // All-time minimum 
+    // All-time maximum
     y += 28;
     tft.setFont(Arial_11_Bold);         
     tft.setTextColor(color);
+    tft.setCursor(x, y);
+    tft.print(ts->AbsoluteMax);
+    sprintf(buf, "%i", ts->AbsoluteMax);
+    xOver = x + 2 + tft.strPixelLen(buf);    
+    tft.drawCircle(xOver, y + 1, 1, color);  
+    tft.setCursor(x+35, y);    // Move over for date
+    tftPrintMonth(ts->AbsoluteMaxTimeStamp.month);
+    tft.print(" ");
+    tft.print(ts->AbsoluteMaxTimeStamp.day);
+    ts->AbsoluteMaxTimeStamp.year < 100 ? tft.print(", 20") : tft.print(", 2");
+    tft.print(ts->AbsoluteMaxTimeStamp.year);
+    tft.setCursor(x+130, y);   // Move over for time
+    if (ts->AbsoluteMaxTimeStamp.hour < 10) tft.print(" ");
+    fHour = ts->AbsoluteMaxTimeStamp.hour;
+    if (ts->AbsoluteMaxTimeStamp.hour > 12) fHour = ts->AbsoluteMaxTimeStamp.hour - 12; 
+    tft.print(fHour);
+    tft.print(":");
+    if (ts->AbsoluteMaxTimeStamp.minute < 10) tft.print("0");
+    tft.print(ts->AbsoluteMaxTimeStamp.minute);
+    ts->AbsoluteMaxTimeStamp.hour < 12 ? tft.print(" AM") : tft.print(" PM");    
+
+    // All-time minimum
+    y += 15;    
     tft.setCursor(x, y);
     tft.print(ts->AbsoluteMin);
     sprintf(buf, "%i", ts->AbsoluteMin);
@@ -457,30 +480,6 @@ char buf[5];
     if (ts->AbsoluteMinTimeStamp.minute < 10) tft.print("0");
     tft.print(ts->AbsoluteMinTimeStamp.minute);
     ts->AbsoluteMinTimeStamp.hour < 12 ? tft.print(" AM") : tft.print(" PM");
-
-    // All-time maximum
-    y += 15;
-    tft.setCursor(x, y);
-    tft.print(ts->AbsoluteMax);
-    sprintf(buf, "%i", ts->AbsoluteMax);
-    xOver = x + 2 + tft.strPixelLen(buf);    
-    tft.drawCircle(xOver, y + 1, 1, color);  
-    tft.setCursor(x+35, y);    // Move over for date
-    tftPrintMonth(ts->AbsoluteMaxTimeStamp.month);
-    tft.print(" ");
-    tft.print(ts->AbsoluteMaxTimeStamp.day);
-    ts->AbsoluteMaxTimeStamp.year < 100 ? tft.print(", 20") : tft.print(", 2");
-    tft.print(ts->AbsoluteMaxTimeStamp.year);
-    tft.setCursor(x+130, y);   // Move over for time
-    if (ts->AbsoluteMaxTimeStamp.hour < 10) tft.print(" ");
-    fHour = ts->AbsoluteMaxTimeStamp.hour;
-    if (ts->AbsoluteMaxTimeStamp.hour > 12) fHour = ts->AbsoluteMaxTimeStamp.hour - 12; 
-    tft.print(fHour);
-    tft.print(":");
-    if (ts->AbsoluteMaxTimeStamp.minute < 10) tft.print("0");
-    tft.print(ts->AbsoluteMaxTimeStamp.minute);
-    ts->AbsoluteMaxTimeStamp.hour < 12 ? tft.print(" AM") : tft.print(" PM");
-    
 }
 
 
