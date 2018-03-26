@@ -183,6 +183,7 @@ char buf[5];                    // To convert temp to string so we can calculate
             tft.print("All-time Max");
 
             // Overwrite prior External
+            tft.setTextColor(CurrentBackgroundColor);
             tft.setFont(Arial_20_Bold);
             tft.setCursor(x+iO, y);
             if (ExternalTemp.lastSensorPresent)
@@ -222,6 +223,7 @@ char buf[5];                    // To convert temp to string so we can calculate
                 tft.print("- -");
             }      
             // Overwrite prior Aux
+            tft.setTextColor(CurrentBackgroundColor);
             tft.setFont(Arial_20_Bold);
             tft.setCursor(x+iO, y+(rO*2));
             if (AuxTemp.lastSensorPresent)
