@@ -111,10 +111,10 @@ static boolean lastFix = false;
             temp = (int16_t)sentence->Value;
             if (sentence->Command == CMD_TEMP_NEGATIVE) temp = -temp;
             switch (sentence->Modifier)
-            {
-                case TS_INTERNAL:   if (InternalTemp.currentTemp != temp) { InternalTemp.currentTemp = temp; InternalTemp.sensorPresent = true; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_EXTERNAL:   if (ExternalTemp.currentTemp != temp) { ExternalTemp.currentTemp = temp; ExternalTemp.sensorPresent = true; displayElement.setDataFlag(gde_Temperature); } break;
-                case TS_AUX:        if (AuxTemp.currentTemp != temp)      { AuxTemp.currentTemp = temp;      AuxTemp.sensorPresent = true;      displayElement.setDataFlag(gde_Temperature); } break;
+            {   // Update if the temperature has changed OR if this is a new reading after we thought the sensor was lost
+                case TS_INTERNAL:   if (InternalTemp.currentTemp != temp || !InternalTemp.sensorPresent) { InternalTemp.currentTemp = temp; InternalTemp.sensorPresent = true; displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_EXTERNAL:   if (ExternalTemp.currentTemp != temp || !ExternalTemp.sensorPresent) { ExternalTemp.currentTemp = temp; ExternalTemp.sensorPresent = true; displayElement.setDataFlag(gde_Temperature); } break;
+                case TS_AUX:        if (AuxTemp.currentTemp != temp      || !AuxTemp.sensorPresent)      { AuxTemp.currentTemp = temp;      AuxTemp.sensorPresent = true;      displayElement.setDataFlag(gde_Temperature); } break;
             }
             break;
 
